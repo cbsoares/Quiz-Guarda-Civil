@@ -1,4 +1,4 @@
-<!-- Index.html — correção: forçar x1.10 no mobile + título nowrap e estudos linkáveis -->
+<!-- Index.html — correção final: mobile header stack + botão zoom visível -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -67,10 +67,25 @@
     .flash-front { background:rgba(255,255,255,0.02); color:#fff; }
     .flash-back { transform: rotateY(180deg); background:rgba(0,0,0,0.12); color:#fff; }
     .flash-inner.flipped { transform: rotateY(180deg); }
-    @media (max-width:420px){
-      .title { font-size:16px; } 
+
+    /* --------------- MOBILE FIX: empilha header e garante botões visíveis --------------- */
+    @media (max-width:520px){
+      .header { flex-wrap:wrap; align-items:center; }
+      /* título em linha própria (visível) */
+      .header > div:first-child { order: 1; flex: 1 1 100%; min-width:0; }
+      .controls { order: 2; flex: 1 1 100%; display:flex; justify-content:flex-start; gap:6px; margin-top:8px; }
+      .title { white-space:normal; font-size:16px; }
+      .controls .icon-btn { width:34px; height:34px; }
+      .controls .btn { padding:6px 8px; font-size:13px; }
+      .scale-label { min-width:46px; font-size:13px; text-align:center; }
     }
-    @media (max-width:520px){ .opts{ grid-template-columns:1fr; } .title{font-size:18px;} }
+
+    @media (max-width:420px){
+      .title { font-size:15px; } 
+      .controls { justify-content:flex-start; gap:6px; }
+    }
+
+    @media (max-width:520px){ .opts{ grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
