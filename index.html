@@ -1,4 +1,4 @@
-<!-- Index.html — pronto para GitHub Pages (com ajustes: escala inicial 1.10, título nowrap, estudos linkáveis) -->
+<!-- Index.html — correção: forçar x1.10 no mobile + título nowrap e estudos linkáveis -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -23,10 +23,10 @@
     .app { width:100%; max-width:920px; display:flex; flex-direction:column; gap:12px; }
     .card { background: var(--card-bg); border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.28); backdrop-filter: blur(6px); transform: scale(var(--card-scale)); transform-origin: top center; transition: transform .12s ease; }
     .header { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .header > div:first-child { min-width: 0; } /* ajuda o título a encolher corretamente */
-    .title { font-size: clamp(18px,4vw,22px); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .header > div:first-child { flex: 1 1 auto; min-width: 0; } /* permite o título encolher corretamente */
+    .controls { flex: 0 0 auto; display:flex; gap:8px; align-items:center; }
+    .title { font-size: clamp(18px,4vw,22px); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
     .subtitle { font-size:13px; color:#e6f7f0; margin-top:6px; }
-    .controls { display:flex; gap:8px; align-items:center; }
     .btn { background:transparent;border:1px solid rgba(255,255,255,0.12); color:#fff;padding:8px 10px;border-radius:10px;font-weight:700; cursor:pointer; }
     .icon-btn { width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid rgba(255,255,255,0.08); background:transparent; color:#fff; cursor:pointer; }
     .scale-label { min-width:62px; text-align:center; font-weight:800; }
@@ -85,7 +85,7 @@
 
       <div class="controls">
         <button class="icon-btn" id="scaleDownBtn" title="Diminuir caixa">A−</button>
-        <div class="scale-label" id="scaleLabel">x1.15</div>
+        <div class="scale-label" id="scaleLabel">x1.10</div>
         <button class="icon-btn" id="scaleUpBtn" title="Aumentar caixa">A+</button>
         <button class="icon-btn" id="fullscreenBtn" title="Tela cheia">⛶</button>
         <button class="btn" id="soundToggle">🔊 Som: On</button>
@@ -211,11 +211,8 @@
   /* linkify: transforma URLs em <a> clicáveis (com escape básico) */
   function linkify(text){
     if (!text) return '';
-    // escape básico
     let out = text.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    // http/https
     const urlPattern = /(\bhttps?:\/\/[^\s<]+[^\s<.,;:!?])/gi;
-    // www.
     const wwwPattern = /(^|[^\/])(www\.[^\s<]+[^\s<.,;:!?])/gi;
     out = out.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
     out = out.replace(wwwPattern, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>');
@@ -233,7 +230,8 @@
   function setScale(v){
     v = Math.max(scaleMin, Math.min(scaleMax, Number(v)));
     document.documentElement.style.setProperty('--card-scale', v.toFixed(2));
-    document.getElementById('scaleLabel').innerText = 'x' + v.toFixed(2);
+    const lbl = document.getElementById('scaleLabel');
+    if (lbl) lbl.innerText = 'x' + v.toFixed(2);
     localStorage.setItem(SCALE_KEY, v.toFixed(2));
   }
   document.getElementById('scaleUpBtn').addEventListener('click', ()=> setScale(readSavedScale() + scaleStep));
@@ -296,7 +294,6 @@
           const d = document.createElement('details'); d.className='summary';
           const sum = document.createElement('summary'); sum.innerText = s.topico || `Tópico ${i+1}`; d.appendChild(sum);
           const div = document.createElement('div'); div.style.padding='8px 6px'; div.style.color='#dfeff5';
-          // usa linkify para transformar URLs em links clicáveis
           div.innerHTML = linkify(s.conteudo || '');
           d.appendChild(div); container.appendChild(d);
         });
@@ -544,12 +541,17 @@
 
   /***** ----------------- Inicialização -----------------*****/
   (function init(){
-    // se usuário nunca salvou escala, inicializa no valor do CSS (1.10)
+    // Se não tiver escala salva, salva o valor do CSS (1.10)
+    const cssScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-scale')) || 1.10;
     if (localStorage.getItem(SCALE_KEY) === null) {
-      const initialScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-scale')) || 1.10;
-      localStorage.setItem(SCALE_KEY, initialScale.toFixed(2));
+      localStorage.setItem(SCALE_KEY, cssScale.toFixed(2));
+    }
+    // FORÇAR x1.10 em telas pequenas (mobile) para iniciar como você pediu
+    if (window.innerWidth <= 520) {
+      localStorage.setItem(SCALE_KEY, '1.10');
     }
     setScale(readSavedScale());
+
     renderStudies();
     showTopicSelection();
     showBestRecord();
