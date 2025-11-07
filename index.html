@@ -221,12 +221,14 @@
   }
 
   /***** ----------------- Scale controls -----------------*****/
-  function readSavedScale(){
-    const s = parseFloat(localStorage.getItem(SCALE_KEY));
-    if (!isNaN(s)) return Math.max(scaleMin, Math.min(scaleMax, s));
-    const css = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
-    return parseFloat(css) || 1.15;
-  }
+ function readSavedScale(){
+  const s = parseFloat(localStorage.getItem(SCALE_KEY));
+  if (!isNaN(s)) return Math.max(scaleMin, Math.min(scaleMax, s));
+  // se não houver escala salva, retorna a --card-scale do CSS (que agora é 1.10)
+  const css = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
+  return parseFloat(css) || 1.10;
+}
+
   function setScale(v){
     v = Math.max(scaleMin, Math.min(scaleMax, Number(v)));
     document.documentElement.style.setProperty('--card-scale', v.toFixed(2));
