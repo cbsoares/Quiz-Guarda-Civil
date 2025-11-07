@@ -550,10 +550,6 @@
   if (localStorage.getItem(SCALE_KEY) === null) {
     localStorage.setItem(SCALE_KEY, (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-scale')) || 1.10).toFixed(2));
   }
-  setScale(readSavedScale());
-  ...
-})();
-
     setScale(readSavedScale());
     renderStudies();
     showTopicSelection();
