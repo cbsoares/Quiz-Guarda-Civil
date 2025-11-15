@@ -1,4 +1,4 @@
-<!-- Index.html — correção final: mobile header stack + botão zoom visível -->
+<!-- Index.html — versão atualizada: força getCards (aba "cartões") + debug -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -7,23 +7,13 @@
   <title>Quiz Guarda Civil — App</title>
   <meta name="theme-color" content="#1e3c72"/>
   <style>
-    :root{
-      --bg1:#0f3b6b; --bg2:#1f6fb0;
-      --card-bg: rgba(255,255,255,0.06); --muted: rgba(255,255,255,0.92);
-      --accent: #00ff9d;
-      --card-scale: 1.10; /* inicia em x1.10 */
-    }
+    :root{ --bg1:#0f3b6b; --bg2:#1f6fb0; --card-bg: rgba(255,255,255,0.06); --muted: rgba(255,255,255,0.92); --accent: #00ff9d; --card-scale: 1.10; }
     html,body{height:100%;margin:0;padding:0}
-    body{
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      background: linear-gradient(135deg,var(--bg1),var(--bg2));
-      color:#fff; display:flex; align-items:center; justify-content:center;
-      padding:env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 12px) 12px;
-    }
+    body{ font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background: linear-gradient(135deg,var(--bg1),var(--bg2)); color:#fff; display:flex; align-items:center; justify-content:center; padding:env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 12px) 12px; }
     .app { width:100%; max-width:920px; display:flex; flex-direction:column; gap:12px; }
     .card { background: var(--card-bg); border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.28); backdrop-filter: blur(6px); transform: scale(var(--card-scale)); transform-origin: top center; transition: transform .12s ease; }
     .header { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .header > div:first-child { flex: 1 1 auto; min-width: 0; } /* permite o título encolher corretamente */
+    .header > div:first-child { flex: 1 1 auto; min-width: 0; }
     .controls { flex: 0 0 auto; display:flex; gap:8px; align-items:center; }
     .title { font-size: clamp(18px,4vw,22px); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
     .subtitle { font-size:13px; color:#e6f7f0; margin-top:6px; }
@@ -68,10 +58,8 @@
     .flash-back { transform: rotateY(180deg); background:rgba(0,0,0,0.12); color:#fff; }
     .flash-inner.flipped { transform: rotateY(180deg); }
 
-    /* --------------- MOBILE FIX: empilha header e garante botões visíveis --------------- */
     @media (max-width:520px){
       .header { flex-wrap:wrap; align-items:center; }
-      /* título em linha própria (visível) */
       .header > div:first-child { order: 1; flex: 1 1 100%; min-width:0; }
       .controls { order: 2; flex: 1 1 100%; display:flex; justify-content:flex-start; gap:6px; margin-top:8px; }
       .title { white-space:normal; font-size:16px; }
@@ -79,12 +67,7 @@
       .controls .btn { padding:6px 8px; font-size:13px; }
       .scale-label { min-width:46px; font-size:13px; text-align:center; }
     }
-
-    @media (max-width:420px){
-      .title { font-size:15px; } 
-      .controls { justify-content:flex-start; gap:6px; }
-    }
-
+    @media (max-width:420px){ .title { font-size:15px; } .controls { justify-content:flex-start; gap:6px; } }
     @media (max-width:520px){ .opts{ grid-template-columns:1fr; } }
   </style>
 </head>
@@ -109,8 +92,6 @@
 
     <!-- PAGES -->
     <div class="card pages" id="pages">
-
-      <!-- HOME -->
       <section id="home" class="page active">
         <div class="welcome">Olá! Escolha um tópico e inicie o quiz quando estiver pronto.</div>
         <div class="home-actions">
@@ -123,19 +104,16 @@
         </div>
       </section>
 
-      <!-- STUDY -->
       <section id="study" class="page">
         <h3>Conteúdos de Estudo</h3>
         <div id="studyList" class="study-list"></div>
       </section>
 
-      <!-- QUIZ -->
       <section id="quiz" class="page">
         <div class="topic-select">
           <div class="average">Escolha o Tópico:</div>
           <select id="topicSelect" class="average"></select>
           <button class="next-btn small-btn" id="loadTopicBtn">Carregar tópico</button>
-          
           <div style="flex:1"></div>
           <div class="small" id="quizNote">Questões por rodada: <strong id="quizSizeLabel"></strong></div>
         </div>
@@ -147,7 +125,6 @@
 
         <div class="question" id="question">Aguardando escolha do tópico...</div>
         <div class="opts" id="opts"></div>
-
         <div class="explain" id="explain" style="display:none"></div>
 
         <div class="next-area">
@@ -159,15 +136,12 @@
         </div>
       </section>
 
-      <!-- CARDS -->
       <section id="cards" class="page">
         <h3>Cartões (clique para virar)</h3>
         <div id="cardsContainer" style="display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px;"></div>
       </section>
-
     </div>
 
-    <!-- BOTTOM TABS -->
     <div class="tabs card" role="navigation" aria-label="Navegação">
       <button class="tabbtn active" data-target="home" onclick="go('home')">Início</button>
       <button class="tabbtn" data-target="study" onclick="go('study')">Estudo</button>
@@ -180,103 +154,38 @@
 <script>
   /* ===================== CONFIGURE AQUI ===================== */
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8bQCfbqpOPB5gjabw3V7PCeXPr5ycPhinbZwSzdE3syvbKHO6WR62EuLmG4GSAtTz9g/exec';
-
   const TEMPLATE_QUESTIONS = null;
   const TEMPLATE_STUDIES = [];
   const TEMPLATE_QUIZ_SIZE = 20;
 
-  // Estado
-  let POOL = [];
-  let currentIndex = 0;
-  let score = 0;
-  let errors = [];
-  let quizStarted = false;
-
-  // Keys e persistência
-  const SOUND_KEY = 'quiz_sound_on';
-  const SCALE_KEY = 'quiz_card_scale';
-  const BEST_KEY = 'quiz_best_record';
-
-  // escala
+  /* =========== estado e chaves =========== */
+  let POOL = []; let currentIndex = 0; let score = 0; let errors = []; let quizStarted = false;
+  const SOUND_KEY = 'quiz_sound_on'; const SCALE_KEY = 'quiz_card_scale'; const BEST_KEY = 'quiz_best_record';
   const scaleMin = 0.8, scaleMax = 1.6, scaleStep = 0.05;
 
-  /***** ----------------- Helpers de compatibilidade -----------------*****/
-  function q_text(q){
-    // Suporta variantes sing/plural e maiúsculas/minúsculas
-    if (!q) return '';
-    return q.pergunta || q.perguntas || q.question || q.Pergunta || q.Question || q.Perguntas || '';
-  }
-  function q_topic(q){
-    return q.materia || q.Matéria || q.materia || q.topic || q.categoria || q.categoria || '';
-  }
-  function q_expl(q){
-    if (!q) return '';
-    // Explicação ou campo resposta (para cartões)
-    return q.explicacao || q.explanation || q.Explicacao || q.Explanation || q.explicacao || q.resposta || q.respostas || q.answer || '';
-  }
-  function q_answer_letter(q){
-    const a = (q.resposta || q.answer || q.Resposta || q.Answer || q.answer || '').toString().trim();
-    if (!a) return '';
-    return a.substr(0,1).toUpperCase();
-  }
-  function q_option(q, letter){
-    const up = q[letter.toUpperCase()];
-    if (up !== undefined && up !== null && up !== '') return up;
-    const low = q[letter.toLowerCase()];
-    if (low !== undefined && low !== null && low !== '') return low;
-    return '';
-  }
+  /* ====== helpers compatibilidade ====== */
+  function q_text(q){ if (!q) return ''; return q.pergunta || q.perguntas || q.question || q.Question || q.Pergunta || ''; }
+  function q_topic(q){ if (!q) return ''; return q.materia || q.topico || q.tópico || q.topic || ''; }
+  function q_expl(q){ if (!q) return ''; return q.explicacao || q.explanation || q.Explicacao || q.resposta || q.respostas || q.answer || ''; }
+  function q_answer_letter(q){ const a = (q.resposta || q.answer || q.Resposta || q.Answer || '').toString().trim(); if (!a) return ''; return a.substr(0,1).toUpperCase(); }
+  function q_option(q, letter){ const up = q[letter.toUpperCase()]; if (up !== undefined && up !== null && up !== '') return up; const low = q[letter.toLowerCase()]; if (low !== undefined && low !== null && low !== '') return low; return ''; }
 
-  /* linkify: transforma URLs em <a> clicáveis (com escape básico) */
-  function linkify(text){
-    if (!text) return '';
-    let out = text.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const urlPattern = /(\bhttps?:\/\/[^\s<]+[^\s<.,;:!?])/gi;
-    const wwwPattern = /(^|[^\/])(www\.[^\s<]+[^\s<.,;:!?])/gi;
-    out = out.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-    out = out.replace(wwwPattern, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>');
-    out = out.replace(/\n/g, '<br>');
-    return out;
-  }
+  function linkify(text){ if (!text) return ''; let out = text.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); const urlPattern = /(\bhttps?:\/\/[^\s<]+[^\s<.,;:!?])/gi; const wwwPattern = /(^|[^\/])(www\.[^\s<]+[^\s<.,;:!?])/gi; out = out.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'); out = out.replace(wwwPattern, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>'); out = out.replace(/\n/g, '<br>'); return out; }
 
-  /***** ----------------- Scale controls -----------------*****/
-  function readSavedScale(){
-    const s = parseFloat(localStorage.getItem(SCALE_KEY));
-    if (!isNaN(s)) return Math.max(scaleMin, Math.min(scaleMax, s));
-    const css = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
-    return parseFloat(css) || 1.10;
-  }
-  function setScale(v){
-    v = Math.max(scaleMin, Math.min(scaleMax, Number(v)));
-    document.documentElement.style.setProperty('--card-scale', v.toFixed(2));
-    const lbl = document.getElementById('scaleLabel');
-    if (lbl) lbl.innerText = 'x' + v.toFixed(2);
-    localStorage.setItem(SCALE_KEY, v.toFixed(2));
-  }
+  /* ===== scale controls ===== */
+  function readSavedScale(){ const s = parseFloat(localStorage.getItem(SCALE_KEY)); if (!isNaN(s)) return Math.max(scaleMin, Math.min(scaleMax, s)); const css = getComputedStyle(document.documentElement).getPropertyValue('--card-scale'); return parseFloat(css) || 1.10; }
+  function setScale(v){ v = Math.max(scaleMin, Math.min(scaleMax, Number(v))); document.documentElement.style.setProperty('--card-scale', v.toFixed(2)); const lbl = document.getElementById('scaleLabel'); if (lbl) lbl.innerText = 'x' + v.toFixed(2); localStorage.setItem(SCALE_KEY, v.toFixed(2)); }
   document.getElementById('scaleUpBtn').addEventListener('click', ()=> setScale(readSavedScale() + scaleStep));
   document.getElementById('scaleDownBtn').addEventListener('click', ()=> setScale(readSavedScale() - scaleStep));
 
-  /***** ----------------- Fullscreen -----------------*****/
+  /* ===== fullscreen ===== */
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  function updateFullscreenButton(){
-    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    fullscreenBtn.innerText = isFs ? '🡼' : '⛶';
-  }
-  fullscreenBtn.addEventListener('click', async ()=>{
-    try {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-        else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
-      } else {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
-      }
-    } catch(e){}
-  });
+  function updateFullscreenButton(){ const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement); fullscreenBtn.innerText = isFs ? '🡼' : '⛶'; }
+  fullscreenBtn.addEventListener('click', async ()=>{ try { if (!document.fullscreenElement && !document.webkitFullscreenElement) { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen(); } else { if (document.exitFullscreen) await document.exitFullscreen(); else if (document.webkitExitFullscreen) await document.webkitExitFullscreen(); } } catch(e){} });
   document.addEventListener('fullscreenchange', updateFullscreenButton);
   document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
 
-  /***** ----------------- Sound -----------------*****/
+  /* ===== sound ===== */
   function isSoundOn(){ return localStorage.getItem(SOUND_KEY) !== '0'; }
   function setSoundOn(v){ localStorage.setItem(SOUND_KEY, v ? '1' : '0'); updateSoundBtn(); }
   function updateSoundBtn(){ document.getElementById('soundToggle').innerText = isSoundOn() ? '🔊 Som: On' : '🔇 Som: Off'; }
@@ -290,7 +199,7 @@
   function playCorrect(){ playTone(880,120,'sine',0.06); }
   function playWrong(){ playTone(220,220,'sawtooth',0.08); }
 
-  /***** ----------------- Navigation & pages -----------------*****/
+  /* ===== navigation/pages ===== */
   function go(target){
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(target).classList.add('active');
@@ -301,7 +210,7 @@
     if (target === 'quiz') { if (!quizStarted) showTopicSelection(); }
   }
 
-  /***** ----------------- STUDIES (fetch + linkify) -----------------*****/
+  /* ===== studies ===== */
   async function renderStudies(){
     const container = document.getElementById('studyList');
     container.innerHTML = '';
@@ -335,10 +244,9 @@
     });
   }
 
-  /***** ----------------- QUIZ -----------------*****/
+  /* ===== quiz (idêntico ao anterior) ===== */
   const quizSizeLabel = document.getElementById('quizSizeLabel');
   quizSizeLabel.innerText = TEMPLATE_QUIZ_SIZE || 20;
-
   const topicSelect = document.getElementById('topicSelect');
   const loadTopicBtn = document.getElementById('loadTopicBtn');
   const nextBtn = document.getElementById('nextBtn');
@@ -351,60 +259,31 @@
   const btnRestart = document.getElementById('btnRestart');
 
   loadTopicBtn.addEventListener('click', ()=> loadTopicQuestions(topicSelect.value));
-  nextBtn.addEventListener('click', ()=> {
-    if (!quizStarted) return;
-    currentIndex++;
-    renderQuestion();
-  });
+  nextBtn.addEventListener('click', ()=> { if (!quizStarted) return; currentIndex++; renderQuestion(); });
 
   async function showTopicSelection(){
     populateTopicSelect(['Todos']);
     try {
       const res = await fetch(`${SCRIPT_URL}?action=getTopics`, {cache:'no-store'});
       const js = await res.json();
-      if (js && js.ok && js.topics) {
-        populateTopicSelect(js.topics || []);
-        return;
-      } else {
-        console.warn('getTopics returned no topics', js);
-      }
-    } catch (e) {
-      console.warn('Erro fetch topics', e);
-    }
-    if (TEMPLATE_QUESTIONS && TEMPLATE_QUESTIONS.length){
-      const t = TEMPLATE_QUESTIONS.map(q=> q.materia || '').filter(Boolean);
-      populateTopicSelect(Array.from(new Set(t)));
-    }
+      if (js && js.ok && js.topics) { populateTopicSelect(js.topics || []); return; } else { console.warn('getTopics returned no topics', js); }
+    } catch (e) { console.warn('Erro fetch topics', e); }
   }
-
-  function populateTopicSelect(topics){
-    topicSelect.innerHTML = '';
-    const optAll = document.createElement('option'); optAll.value='Todos'; optAll.textContent='Todos'; topicSelect.appendChild(optAll);
-    if (topics && topics.length){
-      topics.forEach(t => {
-        const o = document.createElement('option'); o.value = t; o.textContent = t; topicSelect.appendChild(o);
-      });
-    }
-  }
+  function populateTopicSelect(topics){ topicSelect.innerHTML = ''; const optAll = document.createElement('option'); optAll.value='Todos'; optAll.textContent='Todos'; topicSelect.appendChild(optAll); if (topics && topics.length){ topics.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; topicSelect.appendChild(o); }); } }
 
   async function loadTopicQuestions(topic){
-    document.getElementById('question').innerText = 'Carregando perguntas...';
+    qEl.innerText = 'Carregando perguntas...';
     try {
       const encoded = encodeURIComponent(topic || 'Todos');
       const res = await fetch(`${SCRIPT_URL}?action=getQuestionsByTopic&topic=${encoded}`, {cache:'no-store'});
       const js = await res.json();
       let data = (js && js.ok && js.questions) ? js.questions.slice() : [];
-      if (!data.length && TEMPLATE_QUESTIONS && TEMPLATE_QUESTIONS.length){
-        data = TEMPLATE_QUESTIONS.slice(0, TEMPLATE_QUIZ_SIZE);
-      }
+      if (!data.length && TEMPLATE_QUESTIONS && TEMPLATE_QUESTIONS.length){ data = TEMPLATE_QUESTIONS.slice(0, TEMPLATE_QUIZ_SIZE); }
       POOL = data.slice(0, TEMPLATE_QUIZ_SIZE);
       currentIndex = 0; score = 0; errors = []; quizStarted = true;
       btnRestart.style.display = 'none';
       renderQuestion();
-    } catch (err){
-      console.error('Erro ao carregar questões:', err);
-      qEl.innerText = 'Erro ao carregar questões. Verifique a conexão.';
-    }
+    } catch (err){ console.error('Erro ao carregar questões:', err); qEl.innerText = 'Erro ao carregar questões. Verifique a conexão.'; }
   }
 
   function renderQuestion(){
@@ -452,137 +331,104 @@
     }
     const elChosen = document.getElementById('opt_' + chosen);
     if (elChosen) {
-      if (chosen === correct) {
-        elChosen.classList.add('correct');
-        playCorrect();
-        score++;
-      } else {
-        elChosen.classList.add('wrong');
-        playWrong();
-        errors.push(q);
-      }
-    } else {
-      if (chosen !== correct) { playWrong(); errors.push(q); }
-      else playCorrect();
-    }
-
+      if (chosen === correct) { elChosen.classList.add('correct'); playCorrect(); score++; }
+      else { elChosen.classList.add('wrong'); playWrong(); errors.push(q); }
+    } else { if (chosen !== correct) { playWrong(); errors.push(q); } else playCorrect(); }
     const title = (chosen === correct) ? '✅ Correto!' : ('❌ Errado! Resposta: ' + (correct || '—'));
     showExplanation(title, q_expl(q));
     nextBtn.disabled = false;
   }
 
-  function showExplanation(title, explanation){
-    explainEl.style.display = 'block';
-    explainEl.innerHTML = `<strong>${title}</strong><div style="margin-top:8px;color:#dfeff5">${explanation || ''}</div>`;
-  }
+  function showExplanation(title, explanation){ explainEl.style.display = 'block'; explainEl.innerHTML = `<strong>${title}</strong><div style="margin-top:8px;color:#dfeff5">${explanation || ''}</div>`; }
+  function updateProgressUI(){ const total = POOL.length || 0; const pct = total ? Math.round((currentIndex / total) * 100) : 0; progressBar.style.width = pct + '%'; progressInfo.innerText = `${currentIndex + 1} / ${total}`; progressText.innerText = `Pontos: ${score}`; }
+  function finishQuiz(){ quizStarted = false; const total = POOL.length || 1; const pct = Math.round((score / total) * 100); const badge = pct >= 80 ? '🏆' : pct >= 60 ? '🎉' : pct >= 40 ? '👍' : '📘'; const finalTitle = `${badge} Você acertou ${score} de ${total} (${pct}%)`; qEl.innerText = finalTitle; optsDiv.innerHTML = ''; explainEl.style.display = 'block'; const rec = saveRecord(score, total); explainEl.innerHTML = `<div style="color:#dfeff5">${rec && rec.isNew ? '🎯 Novo recorde! ' : ''}${rec && rec.record ? 'Seu recorde: ' + rec.record.score + '/' + rec.record.total + ' ('+rec.record.pct+'%)' : ''}</div>`; btnRestart.style.display = 'inline-block'; progressBar.style.width = '100%'; }
+  function restartQuiz(){ if (topicSelect && topicSelect.value) loadTopicQuestions(topicSelect.value); else loadTopicQuestions('Todos'); }
 
-  function updateProgressUI(){
-    const total = POOL.length || 0;
-    const pct = total ? Math.round((currentIndex / total) * 100) : 0;
-    progressBar.style.width = pct + '%';
-    progressInfo.innerText = `${currentIndex + 1} / ${total}`;
-    progressText.innerText = `Pontos: ${score}`;
-  }
-
-  function finishQuiz(){
-    quizStarted = false;
-    const total = POOL.length || 1;
-    const pct = Math.round((score / total) * 100);
-    const badge = pct >= 80 ? '🏆' : pct >= 60 ? '🎉' : pct >= 40 ? '👍' : '📘';
-    const finalTitle = `${badge} Você acertou ${score} de ${total} (${pct}%)`;
-    qEl.innerText = finalTitle;
-    optsDiv.innerHTML = '';
-    explainEl.style.display = 'block';
-    const rec = saveRecord(score, total);
-    explainEl.innerHTML = `<div style="color:#dfeff5">${rec && rec.isNew ? '🎯 Novo recorde! ' : ''}${rec && rec.record ? 'Seu recorde: ' + rec.record.score + '/' + rec.record.total + ' ('+rec.record.pct+'%)' : ''}</div>`;
-    btnRestart.style.display = 'inline-block';
-    progressBar.style.width = '100%';
-  }
-
-  function restartQuiz(){
-    if (topicSelect && topicSelect.value) loadTopicQuestions(topicSelect.value);
-    else loadTopicQuestions('Todos');
-  }
-
-  /***** ----------------- Local record (localStorage) -----------------*****/
-  function saveRecord(score, total){
-    try {
-      const pct = Math.round((score/total)*100);
-      const now = new Date().toISOString();
-      const current = {score: score, total: total, pct: pct, when: now};
-      const prev = JSON.parse(localStorage.getItem(BEST_KEY) || 'null');
-      if (!prev || pct > prev.pct) {
-        localStorage.setItem(BEST_KEY, JSON.stringify(current));
-        return {isNew:true, record: current, prev: prev};
-      } else {
-        return {isNew:false, record: prev};
-      }
-    } catch(e){ return null; }
-  }
+  /* ===== local record ===== */
+  function saveRecord(score, total){ try { const pct = Math.round((score/total)*100); const now = new Date().toISOString(); const current = {score: score, total: total, pct: pct, when: now}; const prev = JSON.parse(localStorage.getItem(BEST_KEY) || 'null'); if (!prev || pct > prev.pct) { localStorage.setItem(BEST_KEY, JSON.stringify(current)); return {isNew:true, record: current, prev: prev}; } else { return {isNew:false, record: prev}; } } catch(e){ return null; } }
   function getRecord(){ try { return JSON.parse(localStorage.getItem(BEST_KEY) || 'null'); } catch(e){ return null; } }
   function showBestRecord(){ const rec = getRecord(); const el = document.getElementById('bestRecord'); if (!rec) el.innerText = 'Ainda sem recorde. Faça um quiz e apareça aqui!'; else el.innerText = `Seu recorde: ${rec.score}/${rec.total} (${rec.pct}%) — em ${new Date(rec.when).toLocaleString()}`; }
 
-  /***** ----------------- CARTÕES (flashcards) -----------------*****/
-  // Agora o renderCards tenta buscar especificamente na aba "cartões".
-  // Ele tenta vários endpoints/fallbacks comuns para compatibilidade.
+  /* ====== CARTÕES (forçando endpoint getCards) ====== */
   async function renderCards(){
     const container = document.getElementById('cardsContainer');
     container.innerHTML = '';
-    const sheetName = 'cartões'; // <-- nome da aba que você mencionou
+    // nome da aba que você criou (exato). Se usar outro nome, troque aqui.
+    const sheetName = 'cartões';
+    const encoded = encodeURIComponent(sheetName);
+    const endpointsTried = [];
     try {
-      const candidates = [
-        `${SCRIPT_URL}?action=getCards&sheet=${encodeURIComponent(sheetName)}`,
-        `${SCRIPT_URL}?action=getQuestionsBySheet&sheet=${encodeURIComponent(sheetName)}`,
-        `${SCRIPT_URL}?action=getSheetByName&sheet=${encodeURIComponent(sheetName)}`,
-        `${SCRIPT_URL}?action=getSheet&sheet=${encodeURIComponent(sheetName)}`,
-        `${SCRIPT_URL}?action=getAllQuestions`
-      ];
-      for (const url of candidates) {
-        try {
-          const res = await fetch(url, {cache:'no-store'});
-          // tenta decodificar JSON (a maioria dos endpoints do GAS retornam JSON)
-          const js = await res.json();
-          let list = null;
-          if (js && js.ok) {
-            if (Array.isArray(js.cards)) list = js.cards;
-            else if (Array.isArray(js.questions)) list = js.questions;
-            else if (Array.isArray(js.rows)) list = js.rows;
-            else if (Array.isArray(js.data)) list = js.data;
-            else if (Array.isArray(js.items)) list = js.items;
-            else if (Array.isArray(js)) list = js;
-          } else if (Array.isArray(js)) {
-            list = js;
-          }
-          // Se for array de arrays (planilha bruta), mapeia pelo cabeçalho
-          if (list && list.length) {
-            if (Array.isArray(list[0])) {
-              // assume primeira linha = cabeçalho
-              if (list.length > 1) {
-                const headers = list[0].map(h=>String(h || '').toLowerCase().trim());
-                const mapped = list.slice(1).map(row=>{
-                  const obj = {};
-                  row.forEach((val,i)=> obj[headers[i] || i] = val );
-                  return obj;
-                });
-                makeCards(mapped);
-                return;
-              }
-            } else {
-              makeCards(list);
-              return;
-            }
-          }
-        } catch(e){
-          console.warn('fetch cards candidate failed', url, e);
-          continue;
+      // 1) tenta endpoint getCards (específico)
+      const urlCards = `${SCRIPT_URL}?action=getCards&sheet=${encoded}`;
+      endpointsTried.push(urlCards);
+      console.log('Tentando endpoint (getCards):', urlCards);
+      let res = await fetch(urlCards, {cache:'no-store'});
+      let js = await res.json();
+      console.log('Resposta getCards:', js);
+      let list = null;
+      if (js && js.ok && js.cards && Array.isArray(js.cards) && js.cards.length) {
+        list = js.cards;
+      } else if (js && js.ok && Array.isArray(js)) {
+        list = js;
+      } else if (js && js.ok && js.sheet && js.sheet.rows && Array.isArray(js.sheet.rows) && js.sheet.rows.length) {
+        // caso getSheetByName retorne sheet
+        list = js.sheet.rows;
+      }
+      // 2) se não encontrou nada, tenta getQuestionsBySheet
+      if (!list || !list.length) {
+        const urlQSheet = `${SCRIPT_URL}?action=getQuestionsBySheet&sheet=${encoded}`;
+        endpointsTried.push(urlQSheet);
+        console.log('getCards vazio — tentando getQuestionsBySheet:', urlQSheet);
+        res = await fetch(urlQSheet, {cache:'no-store'});
+        js = await res.json();
+        console.log('Resposta getQuestionsBySheet:', js);
+        if (js && js.ok && js.questions && Array.isArray(js.questions) && js.questions.length) {
+          list = js.questions;
+        } else if (js && js.ok && Array.isArray(js)) {
+          list = js;
+        } else if (js && js.ok && js.cards && Array.isArray(js.cards)) {
+          list = js.cards;
         }
       }
+      // 3) fallback para getAllQuestions (último recurso)
+      if (!list || !list.length) {
+        const urlAll = `${SCRIPT_URL}?action=getAllQuestions`;
+        endpointsTried.push(urlAll);
+        console.log('Ainda vazio — tentando getAllQuestions:', urlAll);
+        res = await fetch(urlAll, {cache:'no-store'});
+        js = await res.json();
+        console.log('Resposta getAllQuestions:', js);
+        if (js && js.ok && js.questions && Array.isArray(js.questions) && js.questions.length) {
+          list = js.questions;
+        }
+      }
+
+      console.log('Endpoints tentados:', endpointsTried);
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div class="small">Nenhum cartão disponível na aba "<strong>cartões</strong>". Verifique o nome da aba e os cabeçalhos (pergunta | resposta).</div>';
+        return;
+      }
+
+      // Se list é array de arrays (planilha bruta), transforma em objetos simples
+      if (Array.isArray(list[0]) && !list[0].pergunta && !list[0].question) {
+        // assume primeira linha header
+        const headers = list[0].map(h => (h===null? '': h.toString()));
+        const rows = list.slice(1);
+        const mapped = rows.map(row=>{
+          const obj = {};
+          row.forEach((val,i)=> obj[ (headers[i]||i) ] = val );
+          return obj;
+        });
+        makeCards(mapped);
+        return;
+      }
+
+      // já temos objetos — normaliza e cria cartões
+      makeCards(list);
     } catch(e){
-      console.warn('Erro ao buscar cartões', e);
+      console.error('Erro renderCards:', e);
+      container.innerHTML = '<div class="small">Erro ao buscar cartões. Abra o console para ver detalhes.</div>';
     }
-    // fallback para TEMPLATE_QUESTIONS
-    const fallback = TEMPLATE_QUESTIONS || [];
-    makeCards(fallback);
   }
 
   function makeCards(list){
@@ -591,21 +437,23 @@
     if (!list || list.length === 0) { container.innerHTML = '<div class="small">Nenhum cartão disponível.</div>'; return; }
     // shuffle
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    list.forEach(q=>{
-      // Normaliza campos: algumas planilhas podem usar 'perguntas'/'resposta' ou 'pergunta'/'explicacao'
-      const frontText = q_text(q);
-      const topicText = q_topic(q) || (q.topico || q.topics || '');
-      const backText = q_expl(q) || q.resposta || q.respostas || q.answer || '';
-      const answerLetter = q_answer_letter(q) || '';
+    list.forEach((q, idx)=>{
+      // Suporta formatos variados:
+      // - q.pergunta / q.resposta
+      // - q.question / q.explanation
+      // - objetos simples com colunas nomeadas
+      const frontText = (q.pergunta || q.perguntas || q.question || q[Object.keys(q).find(k=>/perg/i.test(k))] || '').toString();
+      const topicText = (q.topico || q.tópico || q.materia || q.categoria || q.topic || '').toString();
+      const backText = (q.resposta || q.respostas || q.explanation || q.explicacao || q.answer || q[Object.keys(q).find(k=>/resp/i.test(k))] || '').toString();
+
       const wrapper = document.createElement('div'); wrapper.className = 'flashcard card-small';
       const inner = document.createElement('div'); inner.className = 'flash-inner';
       const front = document.createElement('div'); front.className = 'flash-front';
       const back = document.createElement('div'); back.className = 'flash-back';
+
       front.innerHTML = `<div style="font-size:12px;color:#dfeff5">${topicText}</div><div style="font-weight:800;margin-top:8px">${frontText}</div><div style="margin-top:8px;font-size:13px;color:#bfeadf">Clique para ver explicação</div>`;
-      let backHtml = `<div style="font-size:12px;color:#dfeff5">${topicText}</div>`;
-      if (answerLetter) backHtml += `<div style="font-weight:800;margin-top:8px">Resposta: ${answerLetter}</div>`;
-      if (backText) backHtml += `<div style="margin-top:8px;color:#dfeff5">${backText}</div>`;
-      back.innerHTML = backHtml;
+      back.innerHTML = `<div style="font-size:12px;color:#dfeff5">${topicText}</div><div style="font-weight:800;margin-top:8px">${backText}</div>`;
+
       inner.appendChild(front); inner.appendChild(back);
       wrapper.appendChild(inner);
       wrapper.addEventListener('click', ()=> inner.classList.toggle('flipped'));
@@ -613,19 +461,12 @@
     });
   }
 
-  /***** ----------------- Inicialização -----------------*****/
+  /* ===== inicialização ===== */
   (function init(){
-    // Se não tiver escala salva, salva o valor do CSS (1.10)
     const cssScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-scale')) || 1.10;
-    if (localStorage.getItem(SCALE_KEY) === null) {
-      localStorage.setItem(SCALE_KEY, cssScale.toFixed(2));
-    }
-    // FORÇAR x1.10 em telas pequenas (mobile) para iniciar como você pediu
-    if (window.innerWidth <= 520) {
-      localStorage.setItem(SCALE_KEY, '1.10');
-    }
+    if (localStorage.getItem(SCALE_KEY) === null) localStorage.setItem(SCALE_KEY, cssScale.toFixed(2));
+    if (window.innerWidth <= 520) localStorage.setItem(SCALE_KEY, '1.10');
     setScale(readSavedScale());
-
     renderStudies();
     showTopicSelection();
     showBestRecord();
