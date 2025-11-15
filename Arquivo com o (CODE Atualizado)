@@ -29,6 +29,22 @@ function _readQuestionsSheet(){
   return { headers, rows };
 }
 
+// Lê qualquer aba pelo nome (genérico)
+function _readSheetByName(sheetName){
+  if (!SPREADSHEET_ID) throw new Error("SPREADSHEET_ID não definido em Code.gs");
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  if (!ss) throw new Error("Não foi possível abrir a planilha (verifique SPREADSHEET_ID e permissões).");
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error("Aba '"+sheetName+"' não encontrada.");
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 1) return { headers: [], rows: [] };
+  const all = sheet.getRange(1,1,lastRow,lastCol).getValues();
+  const headers = all[0].map(h => (h===null? '': h.toString()));
+  const rows = all.slice(1);
+  return { headers, rows };
+}
+
 function _mapHeaderIndexes(headers){
   const normToIndex = {};
   for (let i=0;i<headers.length;i++) normToIndex[_normalize(headers[i])] = i;
@@ -41,14 +57,14 @@ function _mapHeaderIndexes(headers){
   };
   return {
     idxID: findIndex(['id','identificador']),
-    idxPerg: findIndex(['pergunta','questao','questão','enunciado']),
-    idxA: findIndex(['a','alternativa a','alt a','opcao a','opção a']),
-    idxB: findIndex(['b','alternativa b','alt b','opcao b','opção b']),
-    idxC: findIndex(['c','alternativa c','alt c','opcao c','opção c']),
-    idxD: findIndex(['d','alternativa d','alt d','opcao d','opção d']),
-    idxResp: findIndex(['resposta','correta','gabarito','resposta correta']),
-    idxExp: findIndex(['explicacao','explicação','explicaçao','explic']),
-    idxMat: findIndex(['materia','matéria','assunto','topico','tópico'])
+    idxPerg: findIndex(['pergunta','perguntas','questao','questão','enunciado','pergunta?','perg']),
+    idxA: findIndex(['a','alternativa a','alt a','opcao a','opção a','a)']),
+    idxB: findIndex(['b','alternativa b','alt b','opcao b','opção b','b)']),
+    idxC: findIndex(['c','alternativa c','alt c','opcao c','opção c','c)']),
+    idxD: findIndex(['d','alternativa d','alt d','opcao d','opção d','d)']),
+    idxResp: findIndex(['resposta','respostas','correta','gabarito','resposta correta','resposta?']),
+    idxExp: findIndex(['explicacao','explicação','explicaçao','explic','observacao','comentario','comentário']),
+    idxMat: findIndex(['materia','matéria','assunto','topico','tópico','categoria'])
   };
 }
 
@@ -76,6 +92,37 @@ function _rowsToQuestions(headers, rows){
       D: (r[idx.idxD] || '').toString(),
       answer: answerLetter,
       explanation: (r[idx.idxExp] || '').toString()
+    });
+  }
+  return out;
+}
+
+// Converte uma aba de "cartões" (pergunta / resposta) em objetos
+function _rowsToCards(headers, rows){
+  const normHeaders = headers.map(h=>_normalize(h));
+  // procura índices
+  const idxPerg = normHeaders.indexOf('pergunta') !== -1 ? normHeaders.indexOf('pergunta') :
+                  (normHeaders.indexOf('perguntas') !== -1 ? normHeaders.indexOf('perguntas') :
+                  (normHeaders.indexOf('question') !== -1 ? normHeaders.indexOf('question') : -1));
+  const idxResp = normHeaders.indexOf('resposta') !== -1 ? normHeaders.indexOf('resposta') :
+                  (normHeaders.indexOf('respostas') !== -1 ? normHeaders.indexOf('respostas') :
+                  (normHeaders.indexOf('answer') !== -1 ? normHeaders.indexOf('answer') : -1));
+  const idxTop = normHeaders.indexOf('topico') !== -1 ? normHeaders.indexOf('topico') :
+                 (normHeaders.indexOf('tópico') !== -1 ? normHeaders.indexOf('tópico') :
+                 (normHeaders.indexOf('materia') !== -1 ? normHeaders.indexOf('materia') :
+                 (normHeaders.indexOf('assunto') !== -1 ? normHeaders.indexOf('assunto') : -1)));
+  const out = [];
+  for (let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const pergunta = (idxPerg !== -1 ? (r[idxPerg] || '') : (r[0] || '')).toString().trim();
+    const resposta = (idxResp !== -1 ? (r[idxResp] || '') : (r[1] || '')).toString().trim();
+    const topico = (idxTop !== -1 ? (r[idxTop] || '') : '').toString().trim();
+    if (!pergunta && !resposta) continue;
+    out.push({
+      id: i+1,
+      pergunta: pergunta,
+      resposta: resposta,
+      topico: topico
     });
   }
   return out;
@@ -144,6 +191,60 @@ function getStudies(){
   return res;
 }
 
+// NOVAS FUNÇÕES: ler qualquer aba e retornar cartões / perguntas
+function getCards(sheetName){
+  try {
+    const name = sheetName ? sheetName.toString() : 'cartões';
+    const { headers, rows } = _readSheetByName(name);
+    const cards = _rowsToCards(headers, rows);
+    return cards;
+  } catch (err){
+    // se não achou a aba, lança erro para o caller tratar
+    throw new Error('getCards error: ' + err.toString());
+  }
+}
+
+function getQuestionsBySheet(sheetName){
+  try {
+    const name = sheetName ? sheetName.toString() : SHEET_NAME;
+    const { headers, rows } = _readSheetByName(name);
+    // tenta interpretar como sheet de questões (A/B/C/D)
+    try {
+      const qs = _rowsToQuestions(headers, rows);
+      return qs.slice(0, Math.min(QUIZ_SIZE, qs.length));
+    } catch (innerErr){
+      // não é uma sheet com colunas A/B/C/D — tenta converter como cards (pergunta/resposta)
+      const cards = _rowsToCards(headers, rows);
+      // map para formato de questão simples (sem alternativas)
+      const mapped = cards.map((c, i) => ({
+        id: c.id || i+1,
+        materia: c.topico || '',
+        question: c.pergunta || c.question || '',
+        A: '',
+        B: '',
+        C: '',
+        D: '',
+        answer: (c.resposta || '').toString(),
+        explanation: ''
+      }));
+      return mapped.slice(0, Math.min(QUIZ_SIZE, mapped.length));
+    }
+  } catch (err){
+    throw new Error('getQuestionsBySheet error: ' + err.toString());
+  }
+}
+
+function getSheetByName(sheetName){
+  try {
+    const name = sheetName ? sheetName.toString() : '';
+    if (!name) throw new Error('sheetName obrigatório');
+    const { headers, rows } = _readSheetByName(name);
+    return { headers: headers, rows: rows };
+  } catch (err){
+    throw new Error('getSheetByName error: ' + err.toString());
+  }
+}
+
 // ===== debug helper (execute no editor para forçar autorização e testar) =====
 function testReadSheetDebug(){
   try {
@@ -184,8 +285,40 @@ function doGet(e){
       if (action === 'getStudies') {
         return ContentService.createTextOutput(JSON.stringify({ ok:true, studies: getStudies() })).setMimeType(ContentService.MimeType.JSON);
       }
+      // NOVOS endpoints adicionados para compatibilidade com index.html atualizado
+      if (action === 'getCards') {
+        const sheet = params.sheet || 'cartões';
+        try {
+          const cards = getCards(sheet);
+          return ContentService.createTextOutput(JSON.stringify({ ok:true, cards: cards })).setMimeType(ContentService.MimeType.JSON);
+        } catch(err){
+          return ContentService.createTextOutput(JSON.stringify({ ok:false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      if (action === 'getQuestionsBySheet') {
+        const sheet = params.sheet || SHEET_NAME;
+        try {
+          const questions = getQuestionsBySheet(sheet);
+          return ContentService.createTextOutput(JSON.stringify({ ok:true, questions: questions })).setMimeType(ContentService.MimeType.JSON);
+        } catch(err){
+          return ContentService.createTextOutput(JSON.stringify({ ok:false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      if (action === 'getSheetByName' || action === 'getSheet') {
+        const sheet = params.sheet;
+        if (!sheet) return ContentService.createTextOutput(JSON.stringify({ ok:false, error: 'sheet parameter required' })).setMimeType(ContentService.MimeType.JSON);
+        try {
+          const sheetData = getSheetByName(sheet);
+          return ContentService.createTextOutput(JSON.stringify({ ok:true, sheet: sheetData })).setMimeType(ContentService.MimeType.JSON);
+        } catch(err){
+          return ContentService.createTextOutput(JSON.stringify({ ok:false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
       if (action === 'info') {
-        return ContentService.createTextOutput(JSON.stringify({ ok:true, info: 'Quiz API - actions: getTopics, getQuestionsByTopic, getAllQuestions, getStudies' })).setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput(JSON.stringify({
+          ok:true, 
+          info: 'Quiz API - actions: getTopics, getQuestionsByTopic, getAllQuestions, getStudies, getCards, getQuestionsBySheet, getSheetByName'
+        })).setMimeType(ContentService.MimeType.JSON);
       }
       return ContentService.createTextOutput(JSON.stringify({ ok:false, error:'Unknown action' })).setMimeType(ContentService.MimeType.JSON);
     }
