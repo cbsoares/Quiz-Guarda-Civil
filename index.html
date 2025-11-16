@@ -168,7 +168,7 @@
 
 <script>
   /* ===================== CONFIGURE AQUI ===================== */
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhZAQBzk6fxHHVTxZuV0IG4NJrYwn-fduYtGYHNw2swXbTC8-EaueWnmDHIBAkUN_WiQ/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCxQtaA-TpukAmMSCCj1xt85ieetzAzua6lpQStxi1EB6IDSdbRydw70VOTfhOWxTHxg/exec';
   const TEMPLATE_QUESTIONS = null;
   const TEMPLATE_STUDIES = [];
   const TEMPLATE_QUIZ_SIZE = 20;
@@ -177,6 +177,7 @@
   const DEMO_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas
   const DEMO_LOCAL_KEY = 'quiz_demo_local'; // fallback client key
   const DEMO_SERVER_KEY = 'quiz_demo_server';
+  const DEVICE_ID_KEY = 'quiz_device_id'; // chave para deviceId persistente
 
   /* =========== estado e chaves =========== */
   let POOL = []; let currentIndex = 0; let score = 0; let errors = []; let quizStarted = false;
@@ -265,46 +266,42 @@
     });
   }
 
-  /* ===== demo logic (server-first, fallback local) ===== */
-  let demoTimer = null; let demoExpiresAt = null; let demoLocked = false; let demoSource = null; // 'server' or 'local'
+  /* ===== deviceId + demo snippet (injetado) ===== */
+  function _makeDeviceId(){ return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10); }
+  async function ensureDeviceId(){ let id = localStorage.getItem(DEVICE_ID_KEY); if (!id){ id = _makeDeviceId(); localStorage.setItem(DEVICE_ID_KEY, id); } return id; }
 
-  function isDemoLocked(){ return demoLocked; }
-
-  function showDemoBanner(remainingMs){
-    const banner = document.getElementById('demoBanner');
-    if (!banner) return;
-    if (remainingMs <= 0) { banner.style.display='none'; return; }
-    banner.style.display='inline-flex';
-    document.getElementById('demoRemaining').innerText = formatRemaining(remainingMs);
-  }
-
-  function formatRemaining(ms){
-    if (ms <= 0) return '00:00:00';
-    const s = Math.floor(ms/1000); const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60;
-    return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-  }
-  function pad(n){ return n.toString().padStart(2,'0'); }
-
-  async function checkAndStartDemo(){
-    // Try server-first approach. Server answers with {ok:true, demoActive: bool, expiresAt: ISOString}
+  async function ensureDeviceDemo(){
+    const deviceId = await ensureDeviceId();
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=getDemoStatus`, {cache:'no-store'});
-      const js = await res.json();
-      if (js && js.ok) {
-        if (js.demoActive && js.expiresAt) {
-          setDemoState(new Date(js.expiresAt), 'server');
-          return;
+      // check device-specific status
+      const statusRes = await fetch(`${SCRIPT_URL}?action=getDemoStatus&deviceId=${encodeURIComponent(deviceId)}`, { cache: 'no-store' });
+      const statusJs = await statusRes.json();
+      if (statusJs && statusJs.ok){
+        if (statusJs.demoActive && statusJs.expiresAt) {
+          return { source: 'server', demoActive: true, expiresAt: statusJs.expiresAt };
         }
-        // if server says no demo, request start
-        const startRes = await fetch(`${SCRIPT_URL}?action=startDemo&durationHours=4`, {method:'GET'});
-        const startJs = await startRes.json();
-        if (startJs && startJs.ok && startJs.expiresAt) { setDemoState(new Date(startJs.expiresAt), 'server'); return; }
       }
-    } catch (e) {
-      console.warn('Demo server endpoints indisponíveis, fallback local', e);
+      // if not active, try to start demo for this device
+      const startRes = await fetch(`${SCRIPT_URL}?action=startDemo&deviceId=${encodeURIComponent(deviceId)}&durationHours=4`, { cache: 'no-store' });
+      const startJs = await startRes.json();
+      if (startJs && startJs.ok && (startJs.expiresAt || startJs.active)) {
+        return { source: 'server', demoActive: true, expiresAt: startJs.expiresAt || startJs.expiresAt };
+      }
+      return { source: 'server', demoActive: false };
+    } catch (err){
+      console.warn('Demo server inacessível, fallback local', err);
+      return { source: 'network-error', demoActive: false, error: String(err) };
     }
+  }
 
-    // fallback: use localStorage to create a demo window per-client (not per-server)
+  // replace previous checkAndStartDemo with server-first device-aware logic + local fallback
+  async function checkAndStartDemo(){
+    const result = await ensureDeviceDemo();
+    if (result && result.demoActive && result.expiresAt){
+      setDemoState(new Date(result.expiresAt), 'server');
+      return;
+    }
+    // if server unreachable or not active -> fallback to client local demo (as before)
     const local = JSON.parse(localStorage.getItem(DEMO_LOCAL_KEY) || 'null');
     if (local && local.expiresAt) {
       setDemoState(new Date(local.expiresAt), 'local');
@@ -316,13 +313,25 @@
     setDemoState(expires, 'local');
   }
 
+  /* ===== demo logic (state handlers) ===== */
+  let demoTimer = null; let demoExpiresAt = null; let demoLocked = false; let demoSource = null; // 'server' or 'local'
+  function isDemoLocked(){ return demoLocked; }
+  function showDemoBanner(remainingMs){
+    const banner = document.getElementById('demoBanner');
+    if (!banner) return;
+    if (remainingMs <= 0) { banner.style.display='none'; return; }
+    banner.style.display='inline-flex';
+    document.getElementById('demoRemaining').innerText = formatRemaining(remainingMs);
+  }
+  function formatRemaining(ms){ if (ms <= 0) return '00:00:00'; const s = Math.floor(ms/1000); const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60; return `${pad(h)}:${pad(m)}:${pad(sec)}`; }
+  function pad(n){ return n.toString().padStart(2,'0'); }
+
   function setDemoState(expiresDate, source){
     demoSource = source || 'local';
     demoExpiresAt = expiresDate instanceof Date ? expiresDate : new Date(expiresDate);
     const update = ()=>{
       const now = new Date(); const rem = demoExpiresAt - now;
-      if (rem <= 0) { // expired
-        clearInterval(demoTimer); demoTimer = null; showDemoBanner(0); lockApp(); return; }
+      if (rem <= 0) { clearInterval(demoTimer); demoTimer = null; showDemoBanner(0); lockApp(); return; }
       showDemoBanner(rem);
     };
     if (demoTimer) clearInterval(demoTimer);
@@ -332,29 +341,23 @@
 
   function lockApp(){
     demoLocked = true;
-    // create overlay if not exist
     if (document.getElementById('overlayLock')) return;
     const overlay = document.createElement('div'); overlay.id = 'overlayLock'; overlay.className = 'overlay-lock';
     const card = document.createElement('div'); card.className='overlay-card';
     card.innerHTML = `<h2>Demo expirado</h2><p>Sua sessão demo de 4 horas expirou e o aplicativo foi bloqueado.</p><div style="display:flex;gap:8px;justify-content:center"><a class="linkbtn" href="#" id="contactSupport">Solicitar acesso</a></div>`;
     overlay.appendChild(card);
     document.body.appendChild(overlay);
-
-    // disable interactive controls visually
     document.getElementById('appRoot').style.filter = 'blur(1px)';
     document.querySelectorAll('button,select').forEach(el => el.disabled = true);
-
-    // optional handler for contactSupport (redirect or mailto)
     document.getElementById('contactSupport').addEventListener('click', function(ev){ ev.preventDefault(); window.location.href = 'mailto:suporte@seudominio.com?subject=Demo%20expirado%20-%20Solicitar%20acesso'; });
   }
 
   function unlockAppClientSide(){
-    // only use for development/testing: clears local demo and reloads
     localStorage.removeItem(DEMO_LOCAL_KEY);
     if (document.getElementById('overlayLock')) document.getElementById('overlayLock').remove();
     document.getElementById('appRoot').style.filter = '';
     document.querySelectorAll('button,select').forEach(el => el.disabled = false);
-    demoLocked = false; // will be recomputed on next init
+    demoLocked = false;
     checkAndStartDemo();
   }
 
@@ -549,14 +552,14 @@
   }
 
   /* ===== inicialização ===== */
-  (function init(){
+  (async function init(){
     const cssScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-scale')) || 1.10;
     if (localStorage.getItem(SCALE_KEY) === null) localStorage.setItem(SCALE_KEY, cssScale.toFixed(2));
     if (window.innerWidth <= 520) localStorage.setItem(SCALE_KEY, '1.10');
     setScale(readSavedScale());
 
-    // start demo check (server-first)
-    checkAndStartDemo();
+    // start demo check (server-first device-aware)
+    await checkAndStartDemo();
 
     renderStudies();
     showTopicSelection();
