@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <title>Guarda Civil — Plataforma de Estudos)</title>
+  <title>Guarda Civil — Plataforma de Estudos</title>
   <meta name="theme-color" content="#1e3c72"/>
   <style>
     :root{
@@ -15,38 +15,40 @@
       --card-scale: 1.10;
       --success:#00c46a; --danger:#ff5c6c;
       --btn-padding: 10px 14px;
-      --action-height: 44px;
+      --action-height: 46px;
       --shadow: 0 10px 30px rgba(0,0,0,0.28);
+      --base-font-size: 16px; /* aumentei um pouco */
     }
 
-    html,body{height:100%;margin:0;padding:0}
+    html,body{height:100%;margin:0;padding:0;font-size:var(--base-font-size);}
     body{
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
       background: linear-gradient(135deg,var(--bg1),var(--bg2));
       color:#fff; display:flex; align-items:center; justify-content:center;
       padding:env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 12px) 12px;
+      -webkit-font-smoothing:antialiased;
     }
 
     .app { width:100%; max-width:980px; display:flex; flex-direction:column; gap:12px; }
     .card { background: var(--card-bg); border-radius:14px; padding:16px; box-shadow:var(--shadow); backdrop-filter: blur(6px); }
-    .header { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .header > div:first-child { flex:1; min-width:0; }
-    .title { font-size: clamp(18px,4vw,22px); margin:0; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .subtitle { font-size:13px; color:#e6f7f0; margin-top:6px; }
+    .header { display:flex; justify-content:space-between; align-items:center; gap:10px; z-index:30; }
+    .header > div:first-child { flex: 1 1 auto; min-width: 0; } /* allows shrinking */
+    .title { font-size: clamp(20px,5vw,26px); margin:0; font-weight:800; line-height:1.05; }
+    .subtitle { font-size:14px; color:#e6f7f0; margin-top:6px; }
     .controls { display:flex; gap:8px; align-items:center; }
     .btn { background:transparent;border:1px solid rgba(255,255,255,0.12); color:#fff;padding:var(--btn-padding);border-radius:10px;font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; height:var(--action-height); min-width:84px; }
     .btn[disabled]{ opacity:0.6; cursor:not-allowed; }
     .primary { background: linear-gradient(90deg,var(--accent), var(--accent-2)); color:#012; border:none; box-shadow: 0 6px 18px rgba(0,0,0,0.14); }
     .action-btn { height: var(--action-height); padding: 0 14px; font-size:15px; border-radius:10px; }
-    .small { font-size:13px; color:#dfeff5; }
-    .small-muted { font-size:12px; color:#cfeee3; }
+    .small { font-size:14px; color:#dfeff5; } /* aumento leve */
+    .small-muted { font-size:13px; color:#cfeee3; } /* aumento leve */
     .pages { min-height:360px; }
     .page { display:none; }
     .page.active { display:block; animation: fadeIn .18s ease; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
-    .welcome { font-size:18px; margin:6px 0 12px 0; color:var(--muted); }
+    .welcome { font-size:19px; margin:6px 0 12px 0; color:var(--muted); }
     .tabs { display:flex; justify-content:space-around; gap:6px; margin-top:8px; }
-    .tabbtn { flex:1; padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#fff;font-weight:800;cursor:pointer;text-align:center; }
+    .tabbtn { flex:1; padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#fff;font-weight:800;cursor:pointer;text-align:center; font-size:14px; }
     .tabbtn.active{ background: rgba(255,255,255,0.06); }
     .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .card-small { padding:12px; border-radius:12px; background:rgba(255,255,255,0.03); }
@@ -57,7 +59,7 @@
     .flash-back { transform: rotateY(180deg); background:rgba(0,0,0,0.12); color:#fff; white-space:pre-wrap; }
     .flash-inner.flipped { transform: rotateY(180deg); }
     .opts { display:grid; gap:10px; grid-template-columns:1fr 1fr; margin-top:8px; }
-    button.opt { padding:12px; min-height:62px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:#fff; color:#123; font-weight:800; cursor:pointer; text-align:left; transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; }
+    button.opt { padding:12px; min-height:66px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:#fff; color:#123; font-weight:800; cursor:pointer; text-align:left; transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; font-size:15px; }
     button.opt:hover{ transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.08); }
     button.opt:disabled { opacity:0.85; cursor:not-allowed; transform:none; box-shadow:none; }
     .opt.correct { background: #e9fff2; border-color: #2fa764; color:#064; box-shadow: 0 8px 20px rgba(47,167,100,0.06); }
@@ -69,14 +71,19 @@
 
     /* mobile tweaks */
     @media (max-width:520px){
+      :root{ --action-height:44px; }
       .header { flex-wrap:wrap; align-items:center; }
       .header > div:first-child { order:1; flex:1 1 100%; min-width:0; }
-      .controls { order:2; flex:1 1 100%; display:flex; gap:8px; justify-content:flex-start; margin-top:8px; }
-      .title { font-size:16px; white-space:normal; }
+      .controls { order:2; flex:1 1 100%; display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:8px; }
+      .controls .btn { min-width:84px; height:44px; padding:8px 10px; font-size:14px; }
+      .title { font-size:18px; white-space:normal; }
+      .subtitle { font-size:13px; }
       .opts { grid-template-columns:1fr; }
       .card-small{ padding:10px; }
-      .btn { min-width:64px; height:40px; }
-      .action-btn { height:40px; font-size:14px; }
+      .small { font-size:15px; }
+      .small-muted { font-size:14px; }
+      .tabbtn { font-size:13px; padding:8px; }
+      button.opt { min-height:64px; font-size:16px; }
     }
 
   </style>
@@ -85,24 +92,25 @@
   <div class="app" id="appRoot">
 
     <!-- HEADER -->
-    <div class="card header" id="cardHeader">
+    <div class="card header" id="cardHeader" role="banner">
       <div>
-        <h1 class="title">Guarda Civil — Plataforma de Estudos</h1>
+        <h1 class="title">Guarda Civil — Plataforma</h1>
         <div class="subtitle">Simulados • Flashcards • Quiz • Resultados</div>
       </div>
-      <div class="controls">
-        <div id="userBadge" class="small-muted">Acesso: <strong id="accessLabel">—</strong></div>
+
+      <div class="controls" role="toolbar" aria-label="Controles">
+        <div id="userBadge" class="small-muted" aria-live="polite">Acesso: <strong id="accessLabel">—</strong></div>
         <button class="btn" id="soundToggle" title="Ativar/Desativar som">🔊 On</button>
         <button class="btn" id="btnOpenLogin">Entrar / Resgatar</button>
       </div>
     </div>
 
     <!-- PAGES -->
-    <div class="card pages" id="pages">
+    <div class="card pages" id="pages" role="main">
 
       <!-- HOME -->
-      <section id="home" class="page active">
-        <div class="welcome">Bem-vindo! Escolha um modo para estudar — flashcards, quiz ou simulados.</div>
+      <section id="home" class="page active" aria-labelledby="homeTitle">
+        <div class="welcome" id="homeTitle">Bem-vindo! Escolha um modo para estudar — flashcards, quiz ou simulados.</div>
         <div class="grid">
           <div class="card-small">
             <h4>Estudo Rápido</h4>
@@ -136,16 +144,16 @@
       </section>
 
       <!-- CARDS -->
-      <section id="cards" class="page">
-        <h3>Cartões — clique para virar</h3>
+      <section id="cards" class="page" aria-labelledby="cardsTitle">
+        <h3 id="cardsTitle">Cartões — clique para virar</h3>
         <div id="cardsContainer" style="display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-top:12px;"></div>
       </section>
 
       <!-- QUIZ -->
-      <section id="quiz" class="page">
+      <section id="quiz" class="page" aria-labelledby="quizTitle">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <label class="small" style="font-weight:800">Tópico:</label>
-          <select id="topicSelect"></select>
+          <select id="topicSelect" aria-label="Selecionar tópico"></select>
           <button id="loadTopicBtn" class="btn primary action-btn">Carregar</button>
           <div style="flex:1"></div>
           <div class="small" id="quizNote">Questões por rodada: <strong id="quizSizeLabel"></strong></div>
@@ -164,15 +172,15 @@
       </section>
 
       <!-- SIMULADOS -->
-      <section id="sim" class="page">
-        <h3>Simulados</h3>
+      <section id="sim" class="page" aria-labelledby="simTitle">
+        <h3 id="simTitle">Simulados</h3>
         <div id="simArea"></div>
         <div id="simTimerArea" style="margin-top:8px"></div>
       </section>
 
       <!-- HISTORY -->
-      <section id="history" class="page">
-        <h3>Histórico</h3>
+      <section id="history" class="page" aria-labelledby="historyTitle">
+        <h3 id="historyTitle">Histórico</h3>
         <div id="historyList"></div>
       </section>
 
@@ -223,9 +231,7 @@ let audioCtx = null;
 /* ===================== AUDIO ===================== */
 function ensureAudio(){
   if (audioCtx) return;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  } catch(e){ audioCtx = null; }
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audioCtx = null; }
 }
 function playTone(freq, dur=120, type='sine', gainVal=0.05){
   if (!isSoundOn()) return;
@@ -248,69 +254,21 @@ function updateSoundBtn(){ document.getElementById('soundToggle').innerText = is
 document.getElementById('soundToggle').addEventListener('click', ()=> { setSoundOn(!isSoundOn()); if (isSoundOn()) tryUnlockAudio(); });
 
 function tryUnlockAudio(){
-  // create and resume audio context on first user interaction
-  try {
-    ensureAudio();
-    if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
-  } catch(e){}
+  try { ensureAudio(); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch(e){}
 }
-
-/* unlock audio on first user gesture (tap/click) */
 window.addEventListener('pointerup', function unlockAudio(){ tryUnlockAudio(); window.removeEventListener('pointerup', unlockAudio); }, { once:true });
 
 /* ===================== Demo / Access ===================== */
 function nowMs(){ return Date.now(); }
 function daysToMs(d){ return d * 24*60*60*1000; }
-
-function setDemoAccess(){
-  const expires = nowMs() + daysToMs(DEMO_DAYS);
-  localStorage.setItem('gcm_access','DEMO');
-  localStorage.setItem('gcm_demo_expires', String(expires));
-  updateAccessLabel();
-  alert(`Acesso DEMO ativado por ${DEMO_DAYS} dias.`);
-}
-function clearDemoAccess(){
-  localStorage.removeItem('gcm_access'); localStorage.removeItem('gcm_demo_expires'); localStorage.removeItem('gcm_email');
-  updateAccessLabel();
-}
-function isDemoActive(){
-  const v = localStorage.getItem('gcm_access');
-  if (v !== 'DEMO') return false;
-  const exp = parseInt(localStorage.getItem('gcm_demo_expires') || '0',10);
-  if (!exp) return false;
-  if (nowMs() > exp) { clearDemoAccess(); return false; }
-  return true;
-}
-function demoRemainingMs(){
-  const exp = parseInt(localStorage.getItem('gcm_demo_expires') || '0',10);
-  if (!exp) return 0;
-  return Math.max(0, exp - nowMs());
-}
-function updateAccessLabel(){
-  const lbl = document.getElementById('accessLabel');
-  if (isDemoActive()){
-    const rem = demoRemainingMs();
-    const days = Math.floor(rem / (24*60*60*1000));
-    const hours = Math.floor((rem % (24*60*60*1000)) / (60*60*1000));
-    lbl.innerText = `Demo — ${days}d ${hours}h`;
-    USER.hasAccess = true; USER.email = localStorage.getItem('gcm_email') || null;
-    return;
-  }
-  const v = localStorage.getItem('gcm_access');
-  const email = localStorage.getItem('gcm_email');
-  if (v && v !== 'DEMO'){ lbl.innerText = `Pago (${v})${email ? ' — ' + email : ''}`; USER.hasAccess = true; USER.email = email||null; return; }
-  lbl.innerText = 'Sem acesso'; USER.hasAccess = false; USER.email = null;
-}
+function setDemoAccess(){ const expires = nowMs() + daysToMs(DEMO_DAYS); localStorage.setItem('gcm_access','DEMO'); localStorage.setItem('gcm_demo_expires', String(expires)); updateAccessLabel(); alert(`Acesso DEMO ativado por ${DEMO_DAYS} dias.`); }
+function clearDemoAccess(){ localStorage.removeItem('gcm_access'); localStorage.removeItem('gcm_demo_expires'); localStorage.removeItem('gcm_email'); updateAccessLabel(); }
+function isDemoActive(){ const v = localStorage.getItem('gcm_access'); if (v !== 'DEMO') return false; const exp = parseInt(localStorage.getItem('gcm_demo_expires') || '0',10); if (!exp) return false; if (nowMs() > exp) { clearDemoAccess(); return false; } return true; }
+function demoRemainingMs(){ const exp = parseInt(localStorage.getItem('gcm_demo_expires') || '0',10); if (!exp) return 0; return Math.max(0, exp - nowMs()); }
+function updateAccessLabel(){ const lbl = document.getElementById('accessLabel'); if (isDemoActive()){ const rem = demoRemainingMs(); const days = Math.floor(rem / (24*60*60*1000)); const hours = Math.floor((rem % (24*60*60*1000)) / (60*60*1000)); lbl.innerText = `Demo — ${days}d ${hours}h`; USER.hasAccess = true; USER.email = localStorage.getItem('gcm_email') || null; return; } const v = localStorage.getItem('gcm_access'); const email = localStorage.getItem('gcm_email'); if (v && v !== 'DEMO'){ lbl.innerText = `Pago (${v})${email ? ' — ' + email : ''}`; USER.hasAccess = true; USER.email = email||null; return; } lbl.innerText = 'Sem acesso'; USER.hasAccess = false; USER.email = null; }
 
 /* ===================== NAVIGATION ===================== */
-function go(target){
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(target).classList.add('active');
-  document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.target === target));
-  if (target === 'cards') renderCards();
-  if (target === 'quiz') showTopicSelection();
-  if (target === 'history') renderHistory();
-}
+function go(target){ document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(target).classList.add('active'); document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.target === target)); if (target === 'cards') renderCards(); if (target === 'quiz') showTopicSelection(); if (target === 'history') renderHistory(); }
 
 /* ===================== LOGIN / REDEEM ===================== */
 document.getElementById('btnOpenLogin').addEventListener('click', ()=> openLogin());
@@ -339,7 +297,7 @@ async function redeemCode(name,email,code){
     }
   } catch(e){
     console.error(e);
-    document.getElementById('redeemNotice').innerHTML = '<div class="notice err">Erro na validação (ver console).</div>';
+    document.getElementById('redeemNotice').innerHTML = '<div class="notice err">Erro na validação (veja console).</div>';
   }
 }
 
@@ -383,7 +341,7 @@ async function renderCards(){
   }
 }
 
-/* ===================== QUIZ ===================== */
+/* ===================== QUIZ (mantive comportamentos que já aprovou) ===================== */
 const topicSelect = document.getElementById('topicSelect');
 document.getElementById('loadTopicBtn').addEventListener('click', ()=> { loadTopicQuestions(topicSelect.value); tryUnlockAudio(); });
 document.getElementById('nextBtn').addEventListener('click', ()=> { if (!quizStarted) return; currentIndex++; renderQuestion(); });
@@ -443,7 +401,6 @@ function renderQuestion(){
     btn.onclick = ()=> selectOption(letter);
     optsDiv.appendChild(btn);
   });
-  // update quiz size label
   document.getElementById('quizSizeLabel').innerText = POOL.length || TEMPLATE_QUIZ_SIZE;
 }
 
@@ -454,19 +411,12 @@ function selectOption(letter){
   const chosen = letter.toUpperCase();
   document.querySelectorAll('.opt').forEach(el => el.disabled = true);
   const elChosen = Array.from(document.querySelectorAll('.opt')).find(b => b.innerText.startsWith(chosen + ')'));
-  // mark correct button
   const elCorrect = Array.from(document.querySelectorAll('.opt')).find(b => b.innerText.startsWith((correct||'') + ')'));
   if (elCorrect) elCorrect.classList.add('correct');
   if (elChosen){
-    if (chosen === correct) {
-      elChosen.classList.add('correct'); playCorrect();
-      score++;
-    } else {
-      elChosen.classList.add('wrong'); playWrong();
-      if (elCorrect && elCorrect !== elChosen) elCorrect.classList.add('correct');
-    }
+    if (chosen === correct) { elChosen.classList.add('correct'); playCorrect(); score++; }
+    else { elChosen.classList.add('wrong'); playWrong(); if (elCorrect && elCorrect !== elChosen) elCorrect.classList.add('correct'); }
   } else {
-    // if chosen not found (edge), still play sound
     if (chosen !== correct) playWrong(); else playCorrect();
   }
   const title = (chosen === correct) ? '✅ Correto!' : ('❌ Errado! Resposta: ' + (correct || '—'));
@@ -487,7 +437,8 @@ function finishQuiz(){
 }
 function restartQuiz(){ if (topicSelect && topicSelect.value) loadTopicQuestions(topicSelect.value); else loadTopicQuestions('Todos'); }
 
-/* ===================== Simulados (módulo) ===================== */
+/* SIMULADOS, HISTORY and UTIL functions remain same as previous version (kept compact) */
+
 let SIM = { pool:[], idx:0, answers:[], timer:null, timeLeft:0, config:null };
 
 async function showSimuladoSetup(){
@@ -589,7 +540,7 @@ function reviewSimulado(jsonStr){
   } catch(e){ console.error(e); alert('Erro ao revisar.'); }
 }
 
-/* ===================== HISTORY ===================== */
+/* HISTORY */
 function saveLocalResult(obj){
   const key = 'gcm_history_v1';
   const arr = JSON.parse(localStorage.getItem(key) || '[]');
@@ -611,35 +562,22 @@ function renderHistory(){
   });
 }
 
-/* ===================== UTIL (compatibilidade) ===================== */
+/* UTIL - compat */
 function q_text(q){ if(!q) return ''; return q.enunciado || q.pergunta || q.question || q.text || q.Question || ''; }
 function q_topic(q){ if(!q) return ''; return q.assunto || q.materia || q.topico || q.topic || ''; }
 function q_expl(q){ if(!q) return ''; return q.explicacao || q.explanation || q.resposta || q.explanation || ''; }
 function q_answer_letter(q){ const a = (q.correta || q.resposta || q.answer || '').toString().trim(); if (!a) return ''; return a.substr(0,1).toUpperCase(); }
 function q_option(q, letter){ if (!q) return ''; const up = q[letter] || q[letter.toUpperCase()] || q[letter.toLowerCase()]; if (up) return up; if (q.A && letter==='A') return q.A; if (q.B && letter==='B') return q.B; if (q.C && letter==='C') return q.C; if (q.D && letter==='D') return q.D; return ''; }
-function q_answer_letter(q){ const a = (q.correta || q.resposta || q.answer || '').toString().trim(); if (!a) return ''; return a.substr(0,1).toUpperCase(); }
-
-/* ===================== UTIL DOM ===================== */
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-/* ===================== INIT ===================== */
+/* INIT */
 (function init(){
-  // sound button initial state
-  if (localStorage.getItem(SOUND_KEY) === null) localStorage.setItem(SOUND_KEY, '1');
+  if (localStorage.getItem(SOUND_KEY) === null) localStorage.setItem(SOUND_KEY,'1');
   updateSoundBtn();
-
-  // ensure audio resume on user gesture
-  window.addEventListener('pointerup', function resume(){ tryUnlockAudio(); window.removeEventListener('pointerup', resume); }, { once:true });
-
-  // set demo label duration if visible
   document.getElementById('quizSizeLabel').innerText = TEMPLATE_QUIZ_SIZE || 20;
   updateAccessLabel();
   go('home');
 })();
-
-/* helper used in a few places */
-function tryUnlockAudio(){ try { ensureAudio(); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch(e){} }
-
 </script>
 </body>
 </html>
