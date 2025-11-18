@@ -1,4 +1,3 @@
-<!-- Index.html — versão atualizada: força getCards (aba "cartões") + demo server-first (30min) + overlay de bloqueio -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -172,7 +171,7 @@
   /* ===================== CONFIGURE AQUI ===================== */
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAEHXLI2sZ4XGoHIxN-c4fmWZ4kZx79vh-TmDw-zM-hxPRotXS-lsyUuSCd9EcZy1NRQ/exec';
   const TEMPLATE_QUESTIONS = null;
-  const TEMPLATE_STUDIES = [];
+  const TEMPLATE_STUDIES = []; // se quiser conteúdo offline, coloque objetos { topico, conteudo }
   const TEMPLATE_QUIZ_SIZE = 20;
 
   /* ===== demo config ===== */
@@ -359,6 +358,46 @@
     checkAndStartDemo();
   }
   window.__unlockDemoForDev = unlockAppClientSide; // debug helper (remove in production)
+
+  /* ====== ESTUDOS: função que faltava (corrigida) ====== */
+  async function renderStudies(){
+    if (isDemoLocked()) return;
+    const container = document.getElementById('studyList');
+    if (!container) return;
+    container.innerHTML = '';
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getStudies`, { cache:'no-store' });
+      const js = await res.json();
+      if (js && js.ok && js.studies && Array.isArray(js.studies) && js.studies.length){
+        js.studies.forEach((s,i)=>{
+          const d = document.createElement('details'); d.className='summary';
+          const sum = document.createElement('summary'); sum.innerText = (s.topico || s.topic || `Tópico ${i+1}`);
+          d.appendChild(sum);
+          const div = document.createElement('div'); div.style.padding = '8px 6px'; div.style.color = '#dfeff5';
+          div.innerHTML = linkify(s.conteudo || s.texto || s.conteudo || s.content || '');
+          d.appendChild(div);
+          container.appendChild(d);
+        });
+        return;
+      }
+    } catch(e){
+      console.warn('Erro ao buscar estudos', e);
+    }
+    // fallback para TEMPLATE_STUDIES (se você quiser conteúdo offline)
+    if (!TEMPLATE_STUDIES || !Array.isArray(TEMPLATE_STUDIES) || TEMPLATE_STUDIES.length === 0){
+      container.innerHTML = '<div class="small">Nenhum conteúdo de estudo (adicione aba "Estudos" com colunas: Tópico | Conteúdo).</div>';
+      return;
+    }
+    TEMPLATE_STUDIES.forEach((s,i)=>{
+      const d = document.createElement('details'); d.className='summary';
+      const sum = document.createElement('summary'); sum.innerText = s.topico || s.title || `Tópico ${i+1}`;
+      d.appendChild(sum);
+      const div = document.createElement('div'); div.style.padding = '8px 6px'; div.style.color = '#dfeff5';
+      div.innerHTML = linkify(s.conteudo || s.content || '');
+      d.appendChild(div);
+      container.appendChild(d);
+    });
+  }
 
   /* ===== quiz (idêntico ao anterior) ===== */
   const quizSizeLabel = document.getElementById('quizSizeLabel');
@@ -588,6 +627,7 @@
     // start demo check (server-first, per-device)
     checkAndStartDemo();
 
+    // carregar estudos inicialmente (ou quando aba for aberta)
     renderStudies();
     showTopicSelection();
     showBestRecord();
