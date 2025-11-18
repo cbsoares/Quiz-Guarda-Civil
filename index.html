@@ -1,4 +1,4 @@
-<!-- Index.html — versão atualizada: força getCards (aba "cartões") + demo server-first (4h) + overlay de bloqueio -->
+<!-- Index.html — versão atualizada: força getCards (aba "cartões") + demo server-first (30min) + overlay de bloqueio -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -81,7 +81,7 @@
   </style>
 </head>
 <body>
-  <div class="app" style="width:100%;max-width:820px;">
+  <div class="app" style="width:100%;max-width:820px;" id="appRoot">
 
     <!-- HEADER -->
     <div class="card header" id="cardHeader">
@@ -100,6 +100,8 @@
         <button class="icon-btn" id="scaleUpBtn" title="Aumentar caixa">A+</button>
         <button class="icon-btn" id="fullscreenBtn" title="Tela cheia">⛶</button>
         <button class="btn" id="soundToggle">🔊 Som: On</button>
+        <!-- botão de compra visível -->
+        <button class="btn" id="buyBtn" title="Adquirir versão paga">💳 Comprar</button>
       </div>
     </div>
 
@@ -108,9 +110,9 @@
       <section id="home" class="page active">
         <div class="welcome">Olá! Escolha um tópico e inicie o quiz quando estiver pronto.</div>
         <div class="home-actions">
-          <button class="btn" onclick="go('study')">📘 Estudar</button>
-          <button class="btn" onclick="go('quiz')">🎯 Fazer Quiz</button>
-          <button class="btn" onclick="go('cards')">🃏 Cartões</button>
+          <button class="btn" onclick="go('study')" id="btnStudy">📘 Estudar</button>
+          <button class="btn" onclick="go('quiz')" id="btnQuiz">🎯 Fazer Quiz</button>
+          <button class="btn" onclick="go('cards')" id="btnCards">🃏 Cartões</button>
         </div>
         <div style="margin-top:12px">
           <div id="bestRecord" class="record">Carregando recorde...</div>
@@ -164,18 +166,20 @@
 
   </div>
 
+  <!-- overlay lock inserted dynamically -->
+
 <script>
   /* ===================== CONFIGURE AQUI ===================== */
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfwipgSDH8zprvJ2KFoD0Pzl6NAqA6uOJ9RBaB_spa1wsuqKRPH_7ONTM6JvxBmqT4iA/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAEHXLI2sZ4XGoHIxN-c4fmWZ4kZx79vh-TmDw-zM-hxPRotXS-lsyUuSCd9EcZy1NRQ/exec';
   const TEMPLATE_QUESTIONS = null;
   const TEMPLATE_STUDIES = [];
   const TEMPLATE_QUIZ_SIZE = 20;
 
   /* ===== demo config ===== */
-  const PURCHASE_URL = 'https://seu-site-de-venda.com/checkout'; // <-- substitua pelo link de compra
+  const PURCHASE_URL = 'https://seu-site-de-venda.com/checkout'; // <-- substitua pelo link de compra real
   const DEVICE_ID_KEY = 'quiz_device_id';
   const DEMO_LOCAL_KEY = 'quiz_demo_local'; // fallback quando servidor indisponível
-  const DEMO_DURATION_HOURS = 4; // valor pedido ao servidor se necessário
+  const DEMO_DURATION_HOURS = 0.5; // **0.5 horas = 30 minutos** (editar aqui para alterar duração)
 
   /* =========== estado e chaves =========== */
   let POOL = []; let currentIndex = 0; let score = 0; let errors = []; let quizStarted = false;
@@ -219,69 +223,8 @@
   function playWrong(){ playTone(220,220,'sawtooth',0.08); }
 
   /* ===== navigation/pages ===== */
-  let demoLocked = false;
+  let demoTimer = null; let demoExpiresAt = null; let demoLocked = false; let demoSource = null; // 'server' or 'local'
   function isDemoLocked(){ return demoLocked; }
-  function go(target){
-    if (isDemoLocked()) return;
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(target).classList.add('active');
-    document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.target === target));
-    if (target === 'home') showBestRecord();
-    if (target === 'study') renderStudies();
-    if (target === 'cards') renderCards();
-    if (target === 'quiz') { if (!quizStarted) showTopicSelection(); }
-  }
-
-  /* ===== studies ===== */
-  async function renderStudies(){
-    if (isDemoLocked()) return;
-    const container = document.getElementById('studyList');
-    container.innerHTML = '';
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=getStudies`, {cache:'no-store'});
-      const js = await res.json();
-      if (js && js.ok && js.studies && js.studies.length) {
-        js.studies.forEach((s,i)=>{
-          const d = document.createElement('details'); d.className='summary';
-          const sum = document.createElement('summary'); sum.innerText = s.topico || `Tópico ${i+1}`; d.appendChild(sum);
-          const div = document.createElement('div'); div.style.padding='8px 6px'; div.style.color='#dfeff5';
-          div.innerHTML = linkify(s.conteudo || '');
-          d.appendChild(div); container.appendChild(d);
-        });
-        return;
-      }
-    } catch(e){
-      console.warn('Erro ao buscar estudos', e);
-    }
-    const S = TEMPLATE_STUDIES || [];
-    if (!S || S.length === 0){
-      container.innerHTML = '<div class="small">Nenhum conteúdo de estudo (adicione aba "Estudos" com colunas: Tópico | Conteúdo).</div>';
-      return;
-    }
-    S.forEach((s,i)=> {
-      const d = document.createElement('details'); d.className='summary';
-      const sum = document.createElement('summary'); sum.innerText = s.topico || `Tópico ${i+1}`; d.appendChild(sum);
-      const div = document.createElement('div'); div.style.padding='8px 6px'; div.style.color='#dfeff5';
-      div.innerHTML = linkify(s.conteudo || '');
-      d.appendChild(div); container.appendChild(d);
-    });
-  }
-
-  /* ===== demo logic (server-first, fallback localStorage) ===== */
-
-  function _makeDeviceId(){ return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10); }
-  async function ensureDeviceId(){ let id = localStorage.getItem(DEVICE_ID_KEY); if (!id){ id = _makeDeviceId(); localStorage.setItem(DEVICE_ID_KEY,id); } return id; }
-
-  async function getDemoStatusServer(deviceId){
-    const res = await fetch(`${SCRIPT_URL}?action=getDemoStatus&deviceId=${encodeURIComponent(deviceId)}`, { cache:'no-store' });
-    return await res.json();
-  }
-  async function startDemoServer(deviceId, hours){
-    const res = await fetch(`${SCRIPT_URL}?action=startDemo&deviceId=${encodeURIComponent(deviceId)}&durationHours=${Number(hours)}`, { cache:'no-store' });
-    return await res.json();
-  }
-
-  let demoTimer = null; let demoExpiresAt = null; let demoSource = null; // 'server' or 'local'
 
   function showDemoBanner(remainingMs){
     const banner = document.getElementById('demoBanner');
@@ -298,13 +241,62 @@
   }
   function pad(n){ return n.toString().padStart(2,'0'); }
 
-  function setDemoState(expiresIso, source){
+  /* ===== deviceId helpers (server per-device) ===== */
+  function _makeDeviceId(){ return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10); }
+  async function ensureDeviceId(){ let id = localStorage.getItem(DEVICE_ID_KEY); if (!id){ id = _makeDeviceId(); localStorage.setItem(DEVICE_ID_KEY,id); } return id; }
+  async function getDemoStatusServer(deviceId){
+    const res = await fetch(`${SCRIPT_URL}?action=getDemoStatus&deviceId=${encodeURIComponent(deviceId)}`, { cache:'no-store' });
+    return await res.json();
+  }
+  async function startDemoServer(deviceId, hours){
+    const res = await fetch(`${SCRIPT_URL}?action=startDemo&deviceId=${encodeURIComponent(deviceId)}&durationHours=${Number(hours)}`, { cache:'no-store' });
+    return await res.json();
+  }
+
+  async function checkAndStartDemo(){
+    // server-first but per-device: envia deviceId ao servidor
+    const deviceId = await ensureDeviceId();
+    try {
+      const js = await getDemoStatusServer(deviceId);
+      if (js && js.ok){
+        if (js.demoActive && js.expiresAt){
+          setDemoState(new Date(js.expiresAt), 'server');
+          return;
+        }
+        if (js.used){
+          // servidor indica que dispositivo já usou demo -> bloqueio permanente
+          lockApp({ permanent:true, title:'Demo já utilizada', message:'A demo deste dispositivo já foi utilizada. Para continuar, adquira a versão paga.' });
+          return;
+        }
+        // tentar criar demo para esse device (server)
+        const start = await startDemoServer(deviceId, DEMO_DURATION_HOURS);
+        if (start && start.ok && start.expiresAt){
+          setDemoState(new Date(start.expiresAt), 'server');
+          return;
+        }
+      }
+    } catch (err){
+      console.warn('Demo server endpoints indisponíveis, fallback local', err);
+    }
+
+    // fallback local (cliente)
+    const local = JSON.parse(localStorage.getItem(DEMO_LOCAL_KEY) || 'null');
+    if (local && local.expiresAt){
+      setDemoState(new Date(local.expiresAt), 'local');
+      return;
+    }
+    const now = Date.now(); const expires = new Date(now + DEMO_DURATION_HOURS*3600*1000);
+    localStorage.setItem(DEMO_LOCAL_KEY, JSON.stringify({startedAt: new Date(now).toISOString(), expiresAt: expires.toISOString()}));
+    setDemoState(expires, 'local');
+  }
+
+  function setDemoState(expiresDate, source){
     demoSource = source || 'local';
-    demoExpiresAt = new Date(expiresIso);
+    demoExpiresAt = expiresDate instanceof Date ? expiresDate : new Date(expiresDate);
     if (demoTimer) clearInterval(demoTimer);
     const update = ()=>{
       const now = new Date(); const rem = demoExpiresAt - now;
-      if (rem <= 0) { clearInterval(demoTimer); demoTimer = null; showDemoBanner(0); lockApp({permanent:false}); return; }
+      if (rem <= 0) { clearInterval(demoTimer); demoTimer = null; showDemoBanner(0); lockApp(); return; }
       showDemoBanner(rem);
     };
     update();
@@ -312,12 +304,11 @@
   }
 
   function lockApp(opts){
-    // opts: { permanent: boolean, title?, message? }
     demoLocked = true;
     if (document.getElementById('overlayLock')) return;
     const permanent = !!(opts && opts.permanent);
     const title = (opts && opts.title) ? opts.title : (permanent ? 'Acesso bloqueado' : 'Demo expirado');
-    const msg = (opts && opts.message) ? opts.message : (permanent ? 'A demo já foi utilizada neste dispositivo.' : 'Sua sessão demo de 4 horas expirou e o aplicativo foi bloqueado.');
+    const msg = (opts && opts.message) ? opts.message : (permanent ? 'A demo já foi utilizada neste dispositivo.' : `Sua sessão demo de ${Math.round(DEMO_DURATION_HOURS*60)} minutos expirou e o aplicativo foi bloqueado.`);
     const overlay = document.createElement('div'); overlay.id = 'overlayLock'; overlay.className = 'overlay-lock';
     const card = document.createElement('div'); card.className='overlay-card';
     card.innerHTML = `<h2>${title}</h2><p>${msg}</p><div style="display:flex;gap:8px;justify-content:center"><a class="linkbtn" href="${PURCHASE_URL}" target="_blank" rel="noopener noreferrer">Acessar versão paga</a>${permanent ? '' : '<a id="tryAgainBtn" class="linkbtn" href="#">Tentar reconectar</a>'}</div>`;
@@ -336,60 +327,22 @@
         document.getElementById('appRoot')?.style && (document.getElementById('appRoot').style.filter = '');
         document.querySelectorAll('button,select').forEach(el => el.disabled = false);
         demoLocked = false;
-        initDemoFlow();
+        checkAndStartDemo();
       });
     }
   }
 
-  function unlockAppClientSide(){ // only for dev: clear local demo and device id
+  function unlockAppClientSide(){
+    // only for dev: clears local demo and device id
     localStorage.removeItem(DEMO_LOCAL_KEY);
     localStorage.removeItem(DEVICE_ID_KEY);
     if (document.getElementById('overlayLock')) document.getElementById('overlayLock').remove();
     document.getElementById('appRoot')?.style && (document.getElementById('appRoot').style.filter = '');
     document.querySelectorAll('button,select').forEach(el => el.disabled = false);
     demoLocked = false;
-    initDemoFlow();
+    checkAndStartDemo();
   }
   window.__unlockDemoForDev = unlockAppClientSide; // debug helper (remove in production)
-
-  async function initDemoFlow(){
-    const deviceId = await ensureDeviceId();
-    try {
-      const status = await getDemoStatusServer(deviceId);
-      if (status && status.ok){
-        // server indicates active demo for this device
-        if (status.demoActive && status.expiresAt){
-          setDemoState(status.expiresAt, 'server');
-          return;
-        }
-        // server indicates device used previously (we expect 'used' flag when server is set to permanent-block)
-        if (status.used){
-          lockApp({permanent:true, title:'Demo já utilizada', message:'A demo deste dispositivo já foi utilizada. Para continuar, adquira a versão paga.'});
-          return;
-        }
-        // no active demo and not used -> request start
-        const start = await startDemoServer(deviceId, DEMO_DURATION_HOURS);
-        if (start && start.ok && (start.expiresAt || start.active)){
-          if (start.expiresAt) { setDemoState(start.expiresAt, 'server'); return; }
-          if (start.active && start.expiresAt) { setDemoState(start.expiresAt, 'server'); return; }
-        }
-      }
-    } catch (err){
-      console.warn('Servidor indisponível — fallback local', err);
-      // fallback: use localStorage demo
-      const local = JSON.parse(localStorage.getItem(DEMO_LOCAL_KEY) || 'null');
-      if (local && local.expiresAt){
-        setDemoState(local.expiresAt, 'local');
-        return;
-      }
-      const now = Date.now(); const expires = new Date(now + DEMO_DURATION_HOURS*3600*1000);
-      localStorage.setItem(DEMO_LOCAL_KEY, JSON.stringify({startedAt: new Date(now).toISOString(), expiresAt: expires.toISOString()}));
-      setDemoState(expires.toISOString(), 'local');
-      return;
-    }
-    // if we arrive here, server responded but no demo created -> block (conservative)
-    lockApp({permanent:true, title:'Demo indisponível', message:'Não foi possível ativar a demo. Entre em contato ou adquira a versão paga.'});
-  }
 
   /* ===== quiz (idêntico ao anterior) ===== */
   const quizSizeLabel = document.getElementById('quizSizeLabel');
@@ -616,14 +569,20 @@
     if (window.innerWidth <= 520) localStorage.setItem(SCALE_KEY, '1.10');
     setScale(readSavedScale());
 
-    // start demo check (server-first)
-    initDemoFlow();
+    // start demo check (server-first, per-device)
+    checkAndStartDemo();
 
     renderStudies();
     showTopicSelection();
     showBestRecord();
     window.addEventListener('click', function unlock(){ try{ ensureAudio(); }catch(e){} window.removeEventListener('click', unlock); }, { once:true });
     document.getElementById('quizSizeLabel').innerText = TEMPLATE_QUIZ_SIZE || 20;
+
+    // buy button
+    document.getElementById('buyBtn').addEventListener('click', ()=> { window.open(PURCHASE_URL, '_blank', 'noopener'); });
+
+    // expose a debug unlock helper on window for dev (ONLY for testing)
+    window.__unlockDemoForDev = unlockAppClientSide;
   })();
 
 </script>
