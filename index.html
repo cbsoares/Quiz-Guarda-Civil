@@ -156,18 +156,20 @@
           <div class="small" id="progressInfo">0 / 0</div>
         </div>
 
-        <div class="question" id="question">Aguardando escolha do tópico...</div>
-        <div class="opts" id="opts"></div>
-        <div class="explain" id="explain" style="display:none"></div>
+       <div class="question" id="question">Aguardando escolha do tópico...</div>
 
-        <div class="next-area">
-          <div id="progressText" class="small"></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn" id="btnRestart" onclick="restartQuiz()" style="display:none">🔄 Reiniciar</button>
-            <button class="next-btn" id="nextBtn" disabled>Próxima ➜</button>
-          </div>
-        </div>
-      </section>
+<div class="opts" id="opts"></div>
+
+<div class="explain" id="explain" style="display:none"></div>
+
+<div class="next-area">
+  <div id="progressText" class="small"></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" id="btnRestart" onclick="restartQuiz()" style="display:none">🔄 Reiniciar</button>
+    <button class="next-btn" id="nextBtn" disabled>Próxima ➜</button>
+  </div>
+</div>
+
 
       <section id="cards" class="page">
         <h3>Cartões (clique para virar)</h3>
@@ -272,13 +274,82 @@
   function populateTopicSelect(topics){ topicSelect.innerHTML = ''; const optAll = document.createElement('option'); optAll.value='Todos'; optAll.textContent='Todos'; topicSelect.appendChild(optAll); if (topics && topics.length){ topics.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; topicSelect.appendChild(o); }); } }
   async function loadTopicQuestions(topic){ qEl.innerText = 'Carregando perguntas...'; try { const encoded = encodeURIComponent(topic || 'Todos'); const res = await fetch(`${SCRIPT_URL}?action=getQuestionsByTopic&topic=${encoded}`, {cache:'no-store'}); const js = await res.json(); let data = (js && js.ok && js.questions) ? js.questions.slice() : []; if (!data.length && TEMPLATE_QUESTIONS && TEMPLATE_QUESTIONS.length){ data = TEMPLATE_QUESTIONS.slice(0, TEMPLATE_QUIZ_SIZE); } POOL = data.slice(0, TEMPLATE_QUIZ_SIZE); currentIndex = 0; score = 0; errors = []; quizStarted = true; btnRestart.style.display = 'none'; renderQuestion(); } catch (err){ console.error('Erro ao carregar questões:', err); qEl.innerText = 'Erro ao carregar questões. Verifique a conexão.'; } }
 
-  function renderQuestion(){ explainEl.style.display = 'none'; nextBtn.disabled = true; if (!POOL || POOL.length === 0) { qEl.innerText = 'Nenhuma questão disponível. Carregue outro tópico ou verifique a planilha.'; optsDiv.innerHTML = ''; progressBar.style.width = '0%'; progressInfo.innerText = '0 / 0'; progressText.innerText = ''; btnRestart.style.display = 'inline-block'; quizStarted = false; return; } if (currentIndex >= POOL.length) { finishQuiz(); return; } const q = POOL[currentIndex]; qEl.style.opacity = 0; setTimeout(()=>{ qEl.innerText = `📘 ${q_topic(q) || ''}\n${q_text(q)}`; qEl.style.opacity = 1; }, 120); optsDiv.innerHTML = ''; ['A','B','C','D'].forEach(letter => { const txt = q_option(q, letter); if (!txt) return; const btn = document.createElement('button'); btn.className = 'opt'; btn.id = 'opt_' + letter; btn.innerText = `${letter}) ${txt}`; btn.onclick = ()=> selectOption(letter); optsDiv.appendChild(btn); }); updateProgressUI(); }
+function renderQuestion() {
+    explainEl.style.display = 'none';
+    nextBtn.disabled = true;
 
-  function selectOption(letter){ if (!quizStarted || isDemoLocked()) return; const q = POOL[currentIndex]; const correct = q_answer_letter(q); const chosen = letter.toUpperCase(); document.querySelectorAll('.opt').forEach(el => el.disabled = true); if (correct) { const elCorrect = document.getElementById('opt_' + correct); if (elCorrect) elCorrect.classList.add('correct'); } const elChosen = document.getElementById('opt_' + chosen); if (elChosen) { if (chosen === correct) { elChosen.classList.add('correct'); playCorrect(); score++; } else { elChosen.classList.add('wrong'); playWrong(); errors.push(q); } } else { if (chosen !== correct) { playWrong(); errors.push(q); } else playCorrect(); } const title = (chosen === correct) ? '✅ Correto!' : ('❌ Errado! Resposta: ' + (correct || '—')); showExplanation(title, q_expl(q)); nextBtn.disabled = false; }
-  function showExplanation(title, explanation){ explainEl.style.display = 'block'; explainEl.innerHTML = `<strong>${title}</strong><div style="margin-top:8px;color:#dfeff5">${explanation || ''}</div>`; }
-  function updateProgressUI(){ const total = POOL.length || 0; const pct = total ? Math.round((currentIndex / total) * 100) : 0; progressBar.style.width = pct + '%'; progressInfo.innerText = `${currentIndex + 1} / ${total}`; progressText.innerText = `Pontos: ${score}`; }
-  function finishQuiz(){ quizStarted = false; const total = POOL.length || 1; const pct = Math.round((score / total) * 100); const badge = pct >= 80 ? '🏆' : pct >= 60 ? '🎉' : pct >= 40 ? '👍' : '📘'; const finalTitle = `${badge} Você acertou ${score} de ${total} (${pct}%)`; qEl.innerText = finalTitle; optsDiv.innerHTML = ''; explainEl.style.display = 'block'; const rec = saveRecord(score, total); explainEl.innerHTML = `<div style="color:#dfeff5">${rec && rec.isNew ? '🎯 Novo recorde! ' : ''}${rec && rec.record ? 'Seu recorde: ' + rec.record.score + '/' + rec.record.total + ' ('+rec.record.pct+'%)' : ''}</div>`; btnRestart.style.display = 'inline-block'; progressBar.style.width = '100%'; }
-  function restartQuiz(){ if (topicSelect && topicSelect.value) loadTopicQuestions(topicSelect.value); else loadTopicQuestions('Todos'); }
+    if (!POOL || POOL.length === 0) {
+        qEl.innerText = 'Nenhuma questão disponível.';
+        optsDiv.innerHTML = '';
+        return;
+    }
+
+    if (currentIndex >= POOL.length) {
+        finishQuiz();
+        return;
+    }
+
+    const q = POOL[currentIndex];
+
+    qEl.innerText = `📘 ${q_topic(q) || ''}\n${q_text(q)}`;
+
+    optsDiv.innerHTML = '';
+
+    ['A','B','C','D'].forEach(letter => {
+        const txt = q_option(q, letter);
+        if (!txt) return;
+
+        const btn = document.createElement('button');
+        btn.className = 'opt';
+        btn.id = 'opt_' + letter;
+        btn.innerText = `${letter}) ${txt}`;
+        btn.onclick = () => selectOption(letter);
+
+        optsDiv.appendChild(btn);
+    });
+
+    updateProgressUI();
+}
+
+function selectOption(letter) {
+    const q = POOL[currentIndex];
+    const correct = q_answer_letter(q);
+    const chosen = letter.toUpperCase();
+
+    document.querySelectorAll('.opt').forEach(el => el.disabled = true);
+
+    if (correct) {
+        const okBtn = document.getElementById('opt_' + correct);
+        if (okBtn) okBtn.classList.add('correct');
+    }
+
+    const chosenBtn = document.getElementById('opt_' + chosen);
+    if (chosenBtn) {
+        if (chosen === correct) {
+            chosenBtn.classList.add('correct');
+            score++;
+        } else {
+            chosenBtn.classList.add('wrong');
+            errors.push(q);
+        }
+    }
+
+    showExplanation(
+        chosen === correct ? '✅ Correto!' : `❌ Errado! Resposta correta: ${correct}`,
+        q_expl(q)
+    );
+
+    nextBtn.disabled = false;
+}
+
+function showExplanation(title, explanation) {
+    explainEl.style.display = 'block';
+    explainEl.innerHTML = `<strong>${title}</strong><div style="margin-top:8px">${explanation || ''}</div>`;
+}
+
+function updateProgressUI() {
+    progressInfo.innerText = `${currentIndex + 1} / ${POOL.length}`;
+}
 
   function saveRecord(score, total){ try { const pct = Math.round((score/total)*100); const now = new Date().toISOString(); const current = {score: score, total: total, pct: pct, when: now}; const prev = JSON.parse(localStorage.getItem(BEST_KEY) || 'null'); if (!prev || pct > prev.pct) { localStorage.setItem(BEST_KEY, JSON.stringify(current)); return {isNew:true, record: current, prev: prev}; } else { return {isNew:false, record: prev}; } } catch(e){ return null; } }
   function getRecord(){ try { return JSON.parse(localStorage.getItem(BEST_KEY) || 'null'); } catch(e){ return null; } }
