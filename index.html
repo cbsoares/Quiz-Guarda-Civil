@@ -320,33 +320,23 @@
     demoTimer = setInterval(update, 1000);
   }
 
+  // ======= ALTERAÇÃO: lockApp agora mostra APENAS o botão de compra (sem "Tentar reconectar") =======
   function lockApp(opts){
     demoLocked = true;
     if (document.getElementById('overlayLock')) return;
     const permanent = !!(opts && opts.permanent);
     const title = (opts && opts.title) ? opts.title : (permanent ? 'Acesso bloqueado' : 'Demo expirado');
-    const msg = (opts && opts.message) ? opts.message : (permanent ? 'A demo já foi utilizada neste dispositivo.' : `Sua sessão demo de ${Math.round(DEMO_DURATION_HOURS*60)} minutos expirou e o aplicativo foi bloqueado.`);
+    const msg = (opts && opts.message) ? opts.message : (permanent ? 'A demo já foi utilizada neste dispositivo.' : 'Sua sessão demo expirou. Para continuar, adquira a versão paga.');
     const overlay = document.createElement('div'); overlay.id = 'overlayLock'; overlay.className = 'overlay-lock';
     const card = document.createElement('div'); card.className='overlay-card';
-    card.innerHTML = `<h2>${title}</h2><p>${msg}</p><div style="display:flex;gap:8px;justify-content:center"><a class="linkbtn" href="${PURCHASE_URL}" target="_blank" rel="noopener noreferrer">Acessar versão paga</a>${permanent ? '' : '<a id="tryAgainBtn" class="linkbtn" href="#">Tentar reconectar</a>'}</div>`;
+    // aqui incluímos somente o botão de compra
+    card.innerHTML = `<h2>${title}</h2><p>${msg}</p><div style="display:flex;gap:8px;justify-content:center"><a class="linkbtn" href="${PURCHASE_URL}" target="_blank" rel="noopener noreferrer">Acessar versão paga</a></div>`;
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
     // disable interactive controls visually & functionally
     document.getElementById('appRoot')?.style && (document.getElementById('appRoot').style.filter = 'blur(1px)');
     document.querySelectorAll('button,select').forEach(el => el.disabled = true);
-
-    if (!permanent){
-      const btn = document.getElementById('tryAgainBtn');
-      if (btn) btn.addEventListener('click', function(ev){
-        ev.preventDefault();
-        if (document.getElementById('overlayLock')) document.getElementById('overlayLock').remove();
-        document.getElementById('appRoot')?.style && (document.getElementById('appRoot').style.filter = '');
-        document.querySelectorAll('button,select').forEach(el => el.disabled = false);
-        demoLocked = false;
-        checkAndStartDemo();
-      });
-    }
   }
 
   function unlockAppClientSide(){
