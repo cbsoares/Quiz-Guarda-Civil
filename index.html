@@ -33,9 +33,12 @@
     .track { flex:1; height:12px; background:rgba(255,255,255,0.10); border-radius:999px; overflow:hidden; }
     .bar { height:12px; width:0; background: linear-gradient(90deg, rgba(0,255,157,0.95), rgba(0,214,138,0.95)); transition: width .45s ease; border-radius:999px; }
     .question { margin:12px 0; font-size:18px; color:var(--muted); transition:opacity .2s, transform .2s; white-space:pre-wrap; }
-    .opts {
+   .opt {
     display: block;
+    width: 100%;
+    margin-bottom: 10px;
 }
+
  gap:10px; grid-template-columns:1fr 1fr; }
     button.opt { padding:14px; min-height:62px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:#fff; color:#123; font-weight:800; cursor:pointer; text-align:left; }
     button.opt[disabled]{ opacity:.8; cursor:not-allowed; }
