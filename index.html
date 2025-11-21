@@ -171,7 +171,7 @@
 
 <script>
   /* ===================== CONFIGURE AQUI ===================== */
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyA8E3dkTS7nOiSa2TTdxZy29XqOiGMu16iOB2TcaO-s8ZoOrPMAiYBbPbuzkLbzsdyng/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwV0pvo814MM9TrvYYsKzdo99pSuw9ieg8PtcK-cZsn0aPK9DMkwaw6Qwgz6SnCo9zh_Q/exec';
   const TEMPLATE_QUESTIONS = null;
   const TEMPLATE_STUDIES = []; // se quiser conteúdo offline, coloque objetos { topico, conteudo }
   const TEMPLATE_QUIZ_SIZE = 20;
@@ -180,7 +180,7 @@
   const PURCHASE_URL = 'https://seu-site-de-venda.com/checkout'; // <-- substitua pelo link de compra real
   const DEVICE_ID_KEY = 'quiz_device_id';
   const DEMO_LOCAL_KEY = 'quiz_demo_local'; // fallback quando servidor indisponível
-  const DEMO_DURATION_HOURS = 0.5; // **0.5 horas = 30 minutos** (editar aqui para alterar duração)
+  const DEMO_DURATION_HOURS = 24.0; // **0.5 horas = 30 minutos** (editar aqui para alterar duração)
 
   /* =========== estado e chaves =========== */
   let POOL = []; let currentIndex = 0; let score = 0; let errors = []; let quizStarted = false;
