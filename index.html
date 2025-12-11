@@ -627,13 +627,11 @@
     window.addEventListener('click', function unlock(){ try{ ensureAudio(); }catch(e){} window.removeEventListener('click', unlock); }, { once:true });
     document.getElementById('quizSizeLabel').innerText = TEMPLATE_QUIZ_SIZE || 20;
 
-    // buy button
-    document.getElementById('buyBtn').addEventListener('click', ()=> { window.open(PURCHASE_URL, '_blank', 'noopener'); });
-
     // expose a debug unlock helper on window for dev (ONLY for testing)
     window.__unlockDemoForDev = unlockAppClientSide;
   })();
 
+  // buy button
   document.getElementById("buyBtn").addEventListener("click", () => {
   window.open(PURCHASE_URL, "_blank", "noopener,noreferrer");
 });
