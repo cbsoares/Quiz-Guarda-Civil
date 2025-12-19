@@ -262,12 +262,37 @@
   /* ===== deviceId helpers (server per-device) ===== */
   function _makeDeviceId(){ return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10); }
   async function ensureDeviceId(){ let id = localStorage.getItem(DEVICE_ID_KEY); if (!id){ id = _makeDeviceId(); localStorage.setItem(DEVICE_ID_KEY,id); } return id; }
+
+  // ===== novos helpers para fingerprint / userAgent =====
+  function getFP(){
+    try {
+      return (
+        navigator.platform + '|' +
+        screen.width + 'x' + screen.height + '|' +
+        navigator.language + '|' +
+        (Intl && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : '')
+      );
+    } catch(e){
+      return navigator.platform || '';
+    }
+  }
+  function getUA(){ return navigator.userAgent || ''; }
+
+  // ===== substituição: consultar action=checkDemo e action=startDemo (servidor espera esses nomes) =====
   async function getDemoStatusServer(deviceId){
-    const res = await fetch(`${SCRIPT_URL}?action=getDemoStatus&deviceId=${encodeURIComponent(deviceId)}`, { cache:'no-store' });
+    const fp = encodeURIComponent(getFP());
+    const ua = encodeURIComponent(getUA());
+    const url = `${SCRIPT_URL}?action=checkDemo&deviceId=${encodeURIComponent(deviceId)}&fp=${fp}&ua=${ua}`;
+    const res = await fetch(url, { cache:'no-store' });
     return await res.json();
   }
+
   async function startDemoServer(deviceId, hours){
-    const res = await fetch(`${SCRIPT_URL}?action=startDemo&deviceId=${encodeURIComponent(deviceId)}&durationHours=${Number(hours)}`, { cache:'no-store' });
+    // envia deviceId + fp + ua; server decide o tempo e retorna expiresAt
+    const fp = encodeURIComponent(getFP());
+    const ua = encodeURIComponent(getUA());
+    const url = `${SCRIPT_URL}?action=startDemo&deviceId=${encodeURIComponent(deviceId)}&fp=${fp}&ua=${ua}&durationHours=${Number(hours)}`;
+    const res = await fetch(url, { cache:'no-store' });
     return await res.json();
   }
 
@@ -277,6 +302,7 @@
     try {
       const js = await getDemoStatusServer(deviceId);
       if (js && js.ok){
+        // servidor pode retornar { ok:true, demoActive:true, expiresAt: "...", used:true }
         if (js.demoActive && js.expiresAt){
           setDemoState(new Date(js.expiresAt), 'server');
           return;
