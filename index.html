@@ -172,7 +172,7 @@
 
 <script>
   /* ===================== CONFIGURE AQUI ===================== */
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLCg54Uk-Eoz_HNnXlpRlwyzWXgiqJQhVENlySfXilpWYRDzBnF1ibaB2s_kLRgKfQ/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwV0pvo814MM9TrvYYsKzdo99pSuw9ieg8PtcK-cZsn0aPK9DMkwaw6Qwgz6SnCo9zh_Q/exec';
   const TEMPLATE_QUESTIONS = null;
   const TEMPLATE_STUDIES = []; // se quiser conteúdo offline, coloque objetos { topico, conteudo }
   const TEMPLATE_QUIZ_SIZE = 20;
@@ -626,9 +626,6 @@
     showBestRecord();
     window.addEventListener('click', function unlock(){ try{ ensureAudio(); }catch(e){} window.removeEventListener('click', unlock); }, { once:true });
     document.getElementById('quizSizeLabel').innerText = TEMPLATE_QUIZ_SIZE || 20;
-
-    // buy button
-    document.getElementById('buyBtn').addEventListener('click', ()=> { window.open(PURCHASE_URL, '_blank', 'noopener'); });
 
     // expose a debug unlock helper on window for dev (ONLY for testing)
     window.__unlockDemoForDev = unlockAppClientSide;
