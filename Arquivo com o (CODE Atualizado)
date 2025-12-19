@@ -9,7 +9,7 @@ const API_KEY = SCRIPT_PROPS.getProperty('API_KEY') || '';
 
 const SPREADSHEET_ID = '18eyeKiRJpSYDOWIqc4SVvKJ51Ozn7mWGzMQtU1H1f4I';
 const DEMO_SHEET_NAME = 'DemoControl';
-const DEMO_HOURS = 24;
+const DEMO_HOURS = 48;
 const RATE_LIMIT_SECONDS = 2;
 
 // ===== UTIL =====
@@ -42,12 +42,19 @@ function _rateLimit(key){
 }
 
 // ===== SEARCH =====
-function _findAny(fpHash, uaHash){
+function _findAny(fpHash, uaHash, deviceId){
   const sh=_ensureSheet();
   const rows=sh.getDataRange().getValues();
   for(let i=rows.length-1;i>0;i--){
-    if(rows[i][3]===fpHash || rows[i][4]===uaHash){
-      return {row:rows[i], expired: new Date(rows[i][2]) < new Date()};
+    if(
+      (deviceId && rows[i][0] === deviceId) ||
+      rows[i][3] === fpHash ||
+      rows[i][4] === uaHash
+    ){
+      return {
+        row: rows[i],
+        expired: new Date(rows[i][2]) < new Date()
+      };
     }
   }
   return null;
@@ -65,7 +72,8 @@ function doGet(e){
       const ua=_sanitize(e.parameter.ua,800);
       if(!fp&&!ua) return _json({ok:false,error:'fp_or_ua_required'});
 
-      const match=_findAny(_sha256(fp),_sha256(ua));
+      const deviceId=_sanitize(e.parameter.deviceId,120);
+      const match=_findAny(_sha256(fp), _sha256(ua), deviceId);
       if(match){
         return _json({
           ok:true,
@@ -86,15 +94,17 @@ function doGet(e){
       const fpHash=_sha256(fp);
       const uaHash=_sha256(ua);
 
-      _rateLimit(_sha256(fpHash+uaHash));
+     if(!deviceId) return _json({ok:false,error:'deviceId_required'});
 
-      const exists=_findAny(fpHash,uaHash);
+     _rateLimit(_sha256(deviceId || fpHash + uaHash));
+
+      const exists=_findAny(fpHash, uaHash, deviceId);
       if(exists){
         return _json({
           ok:true,
           active:false,
           used:true,
-          note:'fingerprint_already_used'
+          note:'demo_already_used'
         });
       }
 
